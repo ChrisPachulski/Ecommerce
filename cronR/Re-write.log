@@ -1,0 +1,404 @@
+
+Attaching package: ‘dplyr’
+
+The following objects are masked from ‘package:plyr’:
+
+    arrange, count, desc, failwith, id, mutate, rename, summarise,
+    summarize
+
+The following objects are masked from ‘package:stats’:
+
+    filter, lag
+
+The following objects are masked from ‘package:base’:
+
+    intersect, setdiff, setequal, union
+
+── Attaching packages ─────────────────────────────────────── tidyverse 1.3.0 ──
+✔ ggplot2 3.3.2     ✔ purrr   0.3.4
+✔ tibble  3.0.3     ✔ stringr 1.4.0
+✔ tidyr   1.1.0     ✔ forcats 0.5.0
+✔ readr   1.3.1     
+── Conflicts ────────────────────────────────────────── tidyverse_conflicts() ──
+✖ dplyr::arrange()   masks plyr::arrange()
+✖ purrr::compact()   masks plyr::compact()
+✖ dplyr::count()     masks plyr::count()
+✖ dplyr::failwith()  masks plyr::failwith()
+✖ dplyr::filter()    masks stats::filter()
+✖ dplyr::id()        masks plyr::id()
+✖ dplyr::lag()       masks stats::lag()
+✖ dplyr::mutate()    masks plyr::mutate()
+✖ dplyr::rename()    masks plyr::rename()
+✖ dplyr::summarise() masks plyr::summarise()
+✖ dplyr::summarize() masks plyr::summarize()
+Loading required package: xml2
+
+Attaching package: ‘rvest’
+
+The following object is masked from ‘package:purrr’:
+
+    pluck
+
+The following object is masked from ‘package:readr’:
+
+    guess_encoding
+
+
+Attaching package: ‘jsonlite’
+
+The following object is masked from ‘package:purrr’:
+
+    flatten
+
+Loading required package: usethis
+
+Attaching package: ‘googledrive’
+
+The following objects are masked from ‘package:googlesheets4’:
+
+    request_generate, request_make
+
+Registered S3 method overwritten by 'googlesheets':
+  method           from       
+  print.drive_user googledrive
+
+Attaching package: ‘gargle’
+
+The following object is masked from ‘package:googledrive’:
+
+    request_make
+
+The following object is masked from ‘package:googlesheets4’:
+
+    request_make
+
+
+Attaching package: ‘tidyjson’
+
+The following object is masked from ‘package:jsonlite’:
+
+    read_json
+
+The following object is masked from ‘package:stats’:
+
+    filter
+
+Warning message:
+In stri_count_regex(string, pattern, opts_regex = opts(pattern)) :
+  argument is not an atomic vector; coercing
+Auto-refreshing stale OAuth token.
+[1] "BQ Premium Upload Successful!"
+Parsed with column specification:
+cols(
+  Standardized = col_character(),
+  CK = col_character()
+)
+Warning: 56431 parsing failures.
+ row    col               expected actual                                                        file
+1214 number no trailing characters      † '/home/cujo253/Essential_Referential_CSVS/C20_Addition.csv'
+1651 number no trailing characters      † '/home/cujo253/Essential_Referential_CSVS/C20_Addition.csv'
+1695 number no trailing characters      † '/home/cujo253/Essential_Referential_CSVS/C20_Addition.csv'
+1701 number no trailing characters      † '/home/cujo253/Essential_Referential_CSVS/C20_Addition.csv'
+1753 number no trailing characters      † '/home/cujo253/Essential_Referential_CSVS/C20_Addition.csv'
+.... ...... ...................... ...... ...........................................................
+See problems(...) for more details.
+
+
+Attaching package: ‘foreach’
+
+The following objects are masked from ‘package:purrr’:
+
+    accumulate, when
+
+Loading required package: iterators
+Loading required package: parallel
+[1] "CK Best Selling Data Acquisition Lasted: 18.77 Minutes"
+[1] "TCG Best Sellers Lasted: 5.25"
+Writing to "New_TCG_2"
+Writing to sheet "TCG_Real_View"
+[1] "BQ Premium Upload Successful!"
+[1] "BQ TCG Upload Successful!"
+[1] "BQ CK_Funny_Money Upload Successful!"
+Writing to "Market_Review"
+Writing to sheet "TCG_Market_Angle"
+Writing to "Market_Review"
+Writing to sheet "Funny_Money_Conversion"
+Writing to "Growth_Reports"
+Writing to sheet "BL"
+Writing to "Growth_Reports"
+Writing to sheet "Demand"
+Writing to "Growth_Reports"
+Writing to sheet "Vendors"
+Writing to "Wolfs_Warrens"
+Writing to sheet "Relaxed"
+Writing to "Wolfs_Warrens"
+Writing to sheet "Goldilocks"
+Writing to "Wolfs_Warrens"
+Writing to sheet "Stringent"
+Writing to "Bills & MTG 2020"
+Writing to sheet "BL"
+
+Attaching package: ‘magrittr’
+
+The following object is masked from ‘package:purrr’:
+
+    set_names
+
+The following object is masked from ‘package:tidyr’:
+
+    extract
+
+Writing to "Master_KPI_Review"
+Writing to sheet "Master"
+[1] "BQ_KPI_TRANSFER_COMPLETE!!"
+[1] 63
+
+Attaching package: ‘reshape2’
+
+The following object is masked from ‘package:tidyr’:
+
+    smiths
+
+Writing to "CK_VS_TCG_Review"
+Writing to sheet "Market_Comparisons"
+[1] "BQ TCG Upload Successful!"
+Error in invisible(right = function(text, num_char) { : 
+  supplied argument name 'right' does not match 'x'
+Execution halted
+
+Attaching package: ‘tidyjson’
+
+The following object is masked from ‘package:jsonlite’:
+
+    read_json
+
+The following object is masked from ‘package:stats’:
+
+    filter
+
+Warning message:
+In stri_count_regex(string, pattern, opts_regex = opts(pattern)) :
+  argument is not an atomic vector; coercing
+Auto-refreshing stale OAuth token.
+[1] "BQ Premium Upload Successful!"
+Parsed with column specification:
+cols(
+  Standardized = col_character(),
+  CK = col_character()
+)
+Warning: 56431 parsing failures.
+ row    col               expected actual                                                        file
+1214 number no trailing characters      † '/home/cujo253/Essential_Referential_CSVS/C20_Addition.csv'
+1651 number no trailing characters      † '/home/cujo253/Essential_Referential_CSVS/C20_Addition.csv'
+1695 number no trailing characters      † '/home/cujo253/Essential_Referential_CSVS/C20_Addition.csv'
+1701 number no trailing characters      † '/home/cujo253/Essential_Referential_CSVS/C20_Addition.csv'
+1753 number no trailing characters      † '/home/cujo253/Essential_Referential_CSVS/C20_Addition.csv'
+.... ...... ...................... ...... ...........................................................
+See problems(...) for more details.
+
+
+Attaching package: ‘foreach’
+
+The following objects are masked from ‘package:purrr’:
+
+    accumulate, when
+
+Loading required package: iterators
+Loading required package: parallel
+[1] "CK Best Selling Data Acquisition Lasted: 18.97 Minutes"
+Writing to "New_TCG_2"
+Writing to sheet "TCG_Real_View"
+[1] "Connecting to remote server"
+$acceptInsecureCerts
+[1] FALSE
+
+$browserName
+[1] "chrome"
+
+$browserVersion
+[1] "83.0.4103.61"
+
+$chrome
+$chrome$chromedriverVersion
+[1] "83.0.4103.39 (ccbf011cb2d2b19b506d844400483861342c20cd-refs/branch-heads/4103@{#416})"
+
+$chrome$userDataDir
+[1] "/tmp/.com.google.Chrome.d1LGBj"
+
+
+$`goog:chromeOptions`
+$`goog:chromeOptions`$debuggerAddress
+[1] "localhost:38255"
+
+
+$networkConnectionEnabled
+[1] FALSE
+
+$pageLoadStrategy
+[1] "normal"
+
+$platformName
+[1] "linux"
+
+$proxy
+named list()
+
+$setWindowRect
+[1] TRUE
+
+$strictFileInteractability
+[1] FALSE
+
+$timeouts
+$timeouts$implicit
+[1] 0
+
+$timeouts$pageLoad
+[1] 300000
+
+$timeouts$script
+[1] 30000
+
+
+$unhandledPromptBehavior
+[1] "dismiss and notify"
+
+$`webauthn:virtualAuthenticators`
+[1] TRUE
+
+$webdriver.remote.sessionid
+[1] "600402df7f32dba6c87bbcbcdb7639a7"
+
+$id
+[1] "600402df7f32dba6c87bbcbcdb7639a7"
+
+Error: Can't rename columns that don't exist.
+✖ Column `editions` doesn't exist.
+Backtrace:
+     █
+  1. └─`%>%`(...)
+  2.   ├─base::withVisible(eval(quote(`_fseq`(`_lhs`)), env, env))
+  3.   └─base::eval(quote(`_fseq`(`_lhs`)), env, env)
+  4.     └─base::eval(quote(`_fseq`(`_lhs`)), env, env)
+  5.       └─`_fseq`(`_lhs`)
+  6.         └─magrittr::freduce(value, `_function_list`)
+  7.           └─function_list[[i]](value)
+  8.             ├─dplyr::rename(., c(V1 = "editions", V2 = "qty"))
+  9.             └─dplyr:::rename.data.frame(., c(V1 = "editions", V2 = "qty"))
+ 10.               └─tidyselect::eval_rename(expr(c(...)), .data)
+ 11.                 └─tidyselect:::rename_impl(...)
+ 12.                   └─tidyselect:::eval_select_impl(...)
+ 13.                     ├─tidyselect:::with_subscript_errors(...)
+ 14.                     │ ├─base::tryCatch(...)
+ 15.                     │ │ └─base:::tryCatchList(expr, class
+Execution halted
+
+Attaching package: ‘tidyjson’
+
+The following object is masked from ‘package:jsonlite’:
+
+    read_json
+
+The following object is masked from ‘package:stats’:
+
+    filter
+
+Warning message:
+In stri_count_regex(string, pattern, opts_regex = opts(pattern)) :
+  argument is not an atomic vector; coercing
+Auto-refreshing stale OAuth token.
+[1] "BQ Premium Upload Successful!"
+Parsed with column specification:
+cols(
+  Standardized = col_character(),
+  CK = col_character()
+)
+Warning: 56431 parsing failures.
+ row    col               expected actual                                                        file
+1214 number no trailing characters      † '/home/cujo253/Essential_Referential_CSVS/C20_Addition.csv'
+1651 number no trailing characters      † '/home/cujo253/Essential_Referential_CSVS/C20_Addition.csv'
+1695 number no trailing characters      † '/home/cujo253/Essential_Referential_CSVS/C20_Addition.csv'
+1701 number no trailing characters      † '/home/cujo253/Essential_Referential_CSVS/C20_Addition.csv'
+1753 number no trailing characters      † '/home/cujo253/Essential_Referential_CSVS/C20_Addition.csv'
+.... ...... ...................... ...... ...........................................................
+See problems(...) for more details.
+
+
+Attaching package: ‘foreach’
+
+The following objects are masked from ‘package:purrr’:
+
+    accumulate, when
+
+Loading required package: iterators
+Loading required package: parallel
+[1] "CK Best Selling Data Acquisition Lasted: 19.14 Minutes"
+Writing to "New_TCG_2"
+Writing to sheet "TCG_Real_View"
+[1] "Connecting to remote server"
+$acceptInsecureCerts
+[1] FALSE
+
+$browserName
+[1] "chrome"
+
+$browserVersion
+[1] "83.0.4103.61"
+
+$chrome
+$chrome$chromedriverVersion
+[1] "83.0.4103.39 (ccbf011cb2d2b19b506d844400483861342c20cd-refs/branch-heads/4103@{#416})"
+
+$chrome$userDataDir
+[1] "/tmp/.com.google.Chrome.ArSLbq"
+
+
+$`goog:chromeOptions`
+$`goog:chromeOptions`$debuggerAddress
+[1] "localhost:41795"
+
+
+$networkConnectionEnabled
+[1] FALSE
+
+$pageLoadStrategy
+[1] "normal"
+
+$platformName
+[1] "linux"
+
+$proxy
+named list()
+
+$setWindowRect
+[1] TRUE
+
+$strictFileInteractability
+[1] FALSE
+
+$timeouts
+$timeouts$implicit
+[1] 0
+
+$timeouts$pageLoad
+[1] 300000
+
+$timeouts$script
+[1] 30000
+
+
+$unhandledPromptBehavior
+[1] "dismiss and notify"
+
+$`webauthn:virtualAuthenticators`
+[1] TRUE
+
+$webdriver.remote.sessionid
+[1] "f080e681a4460fc0a8bad2f4b32933e3"
+
+$id
+[1] "f080e681a4460fc0a8bad2f4b32933e3"
+
+Error in if (groupings$V1[i + 1] >= groupings$V1[i]) { : 
+  missing value where TRUE/FALSE needed
+Execution halted
