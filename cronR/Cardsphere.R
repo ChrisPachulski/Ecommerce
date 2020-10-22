@@ -369,11 +369,11 @@ Sys.sleep(5)
 
 username <- remDr$findElement(using = "id", value = "email")
 username$clearElement()
-username$sendKeysToElement(list("cjpach@mac.com"))
+username$sendKeysToElement(list("Username"))
 
 passwd <- remDr$findElement(using = "id", value = "password")
 passwd$clearElement()
-passwd$sendKeysToElement(list("Tasigur95$"))
+passwd$sendKeysToElement(list("Password"))
 
 Post_Credential_Login <- remDr$findElement(using = "xpath", value = "/html/body/div[2]/div/div/div/div/form/button")
 Post_Credential_Login$submitElement()
