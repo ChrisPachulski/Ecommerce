@@ -494,6 +494,7 @@ recipe_spec_base %>% prep() %>% juice() %>% glimpse()
 # Spline Model ------------------------------------------------------------
 # lm
 model_spec_lm = linear_reg() %>% set_engine("lm")
+model_spec_bayes = linear_reg() %>% set_engine("stan")
 # spline model    
 
 recipe_spec_base %>% prep() %>% juice() %>% glimpse()
@@ -540,6 +541,10 @@ calibration_tbl_2 %>% modeltime_forecast(new_data    = testing(splits),
                                        actual_data = data_prepared_tbl) %>% plot_modeltime_forecast()
 
 calibration_tbl_2 %>% modeltime_accuracy()
+
+# Bayesian Recipe 
+
+
 
 # Compare workflow --------------------------------------------------------
 
