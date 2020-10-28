@@ -266,21 +266,27 @@ refit_tbl %>% modeltime_accuracy() %>% mutate(smape = round(smape/2,2) )
  
 
 
-model_fit_prophet_2 = prophet_reg(
-    changepoint_num = 25,
-    changepoint_range = .25
-) %>% set_engine("prophet") %>% fit(value ~ Date, data = training(splits))
+model_fit_smoothing = exp_smoothing(
+    error = "additive",
+    trend = "none",
+    season = "none"
+) %>% set_engine("ets") %>%
+    fit(value ~ ., training(splits)%>% select(-set_release,-new_printings))
 
-modeltime_table(model_fit_prophet_2) %>% modeltime_calibrate(new_data = testing(splits)) %>%
-    modeltime_forecast(new_data = testing(splits),actual_data = data_prepared_tbl)%>% 
-    #Inversion
-    mutate(across(.value:.conf_hi, .fns = ~standardize_inv_vec(x=.,
-                                                               mean = std_mean,
-                                                               sd = standard_deviation))) %>%
-    mutate(across(.value:.conf_hi,.fns = ~log_interval_inv_vec(
-        x=.,
-        limit_lower = lower_limit,
-        limit_upper = upper_limit,
-        offset = offset
-    ))) %>%
+
+model_fit_seasonal = seasonal_reg(seasonal_period_1 = 7,
+             seasonal_period_2 = 21,
+             seasonal_period_3 = 40) %>%
+    set_engine("tbats")  %>%
+    fit(value ~ ., (training(splits) %>% select(-set_release,-new_printings)) )
+
+modeltime_table(
+    model_fit_smoothing,
+    model_fit_seasonal
+) %>% 
+    modeltime_calibrate(testing(splits)%>% select(-set_release,-new_printings)) %>%
+    modeltime_forecast(
+        new_data = testing(splits) %>% select(-set_release,-new_printings),
+        actual_data = data_prepared_tbl %>% select(-set_release,-new_printings)
+    ) %>%
     plot_modeltime_forecast()
