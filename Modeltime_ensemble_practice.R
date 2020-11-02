@@ -1,4 +1,13 @@
-pacman::p_load(tidyverse,timetk,lubridate,bigrquery,modeltime,recipes,rsample,kknn,earth,tune)
+# devtools::install_github("tidymodels/tune")
+# devtools::install_github("tidymodels/recipes")
+# devtools::install_github("tidymodels/workflows")
+# devtools::install_github("tidymodels/parsnip")
+# 
+# # Modeltime & Timetk Development Versions
+# # ----------------------------------------
+# devtools::install_github("business-science/modeltime")
+# devtools::install_github("business-science/timetk")
+pacman::p_load(tidyverse,timetk,lubridate,bigrquery,modeltime,recipes,rsample,kknn,earth,tidymodels,rules,doFuture,future,tune)
 
 gaeas_cradle <- function(email){
     con <- dbConnect(
@@ -41,9 +50,9 @@ statement <- paste(
 )
 
 raw_query <- dbSendQuery(con, statement = statement) %>% dbFetch(., n = -1) %>% distinct()
-raw_query %>% filter(grepl("Ghoulcaller Gisa",Key))
+raw_query %>% filter(grepl("Crucible of Worlds",Key))
 
-the_graph_title = "Ghoulcaller GisaCommander 2014M"
+the_graph_title = "Crucible of WorldsFifth DawnR"
 
 unique_card = raw_query[which(raw_query$Key == the_graph_title),] %>% mutate(Arb = ifelse(is.na(Arb), (MKT*(-1)),Arb ),
                                                                                                     BL = ifelse(is.na(BL), (0), BL ),
@@ -81,10 +90,10 @@ bl_prepared_tbl = unique_card_bl %>% summarise_by_time(.date_var = Date, .by = "
     
 
 lower_limit = 0
-upper_limit = 16.4
+upper_limit = 49.4
 offset = 1
-std_mean = 0.139616246925689
-standard_deviation = 0.921417012014815
+std_mean = -0.63147891092701
+standard_deviation =  0.923756075465738
 
 horizon = 30
 lag_period = 30
@@ -138,111 +147,132 @@ recipe_spec_base = recipe(value ~ ., data = training(splits)) %>%
     #dummy Encoding
     step_dummy(all_nominal(),one_hot = T) %>%
     step_interact(~matches("mday7") * matches("wday.lbl")) %>%
-    step_fourier(Date, period = c(15,40,60), K =2)
+    step_fourier(Date, period = c(4,10,20,40), K =2)
 
 recipe_spec_base %>% prep() %>% juice() %>% glimpse() 
  
 
 # Spline Model ------------------------------------------------------------
 # lm
-model_spec_lm = linear_reg() %>% set_engine("lm")
+model_spec_lm = linear_reg(mode = "regression",penalty = 50, mixture = .5) %>% set_engine("lm")
 model_spec_rf = rand_forest(mode = "regression") %>% set_engine("randomForest")
+model_spec_rfxgb_spark = boost_tree("regression", mtry = 50, trees = 5000, tree_depth = 30) %>% set_engine("xgboost")
 model_spec_exp_smooth = exp_smoothing(mode = "regression") %>% set_engine("ets")
 model_spec_arima = arima_boost(mode = "regression") %>% set_engine("auto_arima_xgboost")
-model_spec_glmnet = linear_reg(penalty = 0.1,mixture   = 0.5) %>% set_engine("glmnet") 
-#model_spec_arima_2 = arima_reg() %>% set_engine("auto_arima") 
-model_spec_kknn = nearest_neighbor() %>% set_engine("kknn") 
-model_spec_prophet = prophet_reg() %>% set_engine("prophet") 
+model_spec_kknn = nearest_neighbor(mode = "regression",neighbors = 3, dist_power = .1) %>% set_engine("kknn") 
+model_spec_prophet = prophet_boost(mode="regression", min_n = 7, tree_depth = 10, trees = 40,loss_reduction = .05, changepoint_num = 10, changepoint_range = .95, learn_rate = .01,seasonality_yearly = F,seasonality_weekly = F,seasonality_daily = F) %>% set_engine("prophet_xgboost") 
+model_spec_glmnet = linear_reg(penalty = 0.75,mixture   = 0.15) %>% set_engine("glmnet")
+model_spec_mars = mars(mode = "regression", num_terms = round(horizon * .33,0) ) %>% set_engine("earth")
+model_spec_svm = svm_poly(mode = "regression", cost = 25) %>% set_engine("kernlab")
+model_spec_svm_rbf = svm_rbf(mode = "regression", cost = 1, rbf_sigma = 0.01) %>% set_engine("kernlab")
+model_spec_nnetar = nnetar_reg(hidden_units = 5, penalty = 3, num_networks = 7, epochs = 5000) %>% set_engine("nnetar")
 
 # spline model    
-recipe_spec_base_1 = recipe_spec_base %>% step_rm(Date,contains("_lag")) %>% step_ns(contains("index.num"),deg_free = 2) 
-
+recipe_spec_base_1 = recipe_spec_base %>% step_rm(Date,contains("_lag")) %>% step_ns(contains("index.num"),deg_free = 4) 
 workflow_fit_lm_1_spline = workflow() %>% add_model(model_spec_lm) %>% add_recipe(recipe_spec_base_1) %>% fit(training(splits))
 
-calibration_tbl = modeltime_table(workflow_fit_lm_1_spline) %>% modeltime_calibrate(new_data = testing(splits))
-
 # * Lag Recipe 
-
 recipe_spec_base_2 = recipe_spec_base %>% step_rm(Date) %>% step_naomit(starts_with("value_lag"))
-
 workflow_fit_lm_2_lag = workflow() %>% add_model(model_spec_lm) %>% add_recipe(recipe_spec_base_2) %>% fit(training(splits))
-
-calibration_tbl_2 = modeltime_table(workflow_fit_lm_2_lag) %>% modeltime_calibrate(new_data = testing(splits))
 
 # * random forest base
 recipe_spec_base_3 = recipe_spec_base  %>% step_naomit(starts_with("value_lag"))
+workflow_fit_rf_3_lag = workflow() %>% add_model(model_spec_rfxgb_spark) %>% add_recipe(recipe_spec_base_1) %>% fit(training(splits))
 
-workflow_fit_rf_3_lag = workflow() %>% add_model(model_spec_rf) %>% add_recipe(recipe_spec_base_3) %>% fit(training(splits))
-
-calibration_tbl_3 = modeltime_table(workflow_fit_rf_3_lag) %>% modeltime_calibrate(new_data = testing(splits))
+# * random forest xgb spark
+workflow_fit_rf_9_lag = workflow() %>% add_model(model_spec_rf) %>% add_recipe(recipe_spec_base_1) %>% fit(training(splits))
 
 # * Exp Smoothing
 recipe_spec_base_4 = recipe_spec_base  %>% step_rm(set_release,new_printings) %>% step_naomit(starts_with("value_lag"))
 
 workflow_fit_expsm_4_lag = workflow() %>% add_model(model_spec_exp_smooth) %>% add_recipe(recipe_spec_base_4) %>% fit(training(splits))
 
-calibration_tbl_4 = modeltime_table(workflow_fit_expsm_4_lag) %>% modeltime_calibrate(new_data = testing(splits))
 
 # * arima base
 recipe_spec_base_5 = recipe_spec_base  %>% step_naomit(starts_with("value_lag"))
 
 workflow_fit_ari_5_lag = workflow() %>% add_model(model_spec_arima) %>% add_recipe(recipe_spec_base_5) %>% fit(training(splits))
 
-calibration_tbl_5 = modeltime_table(workflow_fit_ari_5_lag) %>% modeltime_calibrate(new_data = testing(splits))
-
-# * arima base
-recipe_spec_base_8 = recipe_spec_base %>% step_rm(Date,contains("_lag")) %>% step_ns(contains("index.num"),deg_free = 2) 
-
-workflow_fit_glm_8_lag = workflow() %>% add_model(model_spec_glmnet) %>% add_recipe(recipe_spec_base_8) %>% fit(training(splits))
-
-calibration_tbl_8 = modeltime_table(workflow_fit_ari_8_lag) %>% modeltime_calibrate(new_data = testing(splits))
 
 # * arima base
 recipe_spec_base_6 = recipe_spec_base  %>% step_naomit(starts_with("value_lag"))
 
-workflow_fit_ffnn_6_lag = workflow() %>% add_model(model_spec_kknn) %>% add_recipe(recipe_spec_base_6) %>%fit(training(splits))
-
-calibration_tbl_6 = modeltime_table(workflow_fit_ffnn_6_lag) %>% modeltime_calibrate(new_data = testing(splits))
+workflow_fit_ffnn_6_lag = workflow() %>% add_model(model_spec_kknn) %>% add_recipe(recipe_spec_base_1) %>%fit(training(splits))
 
 # * Multivariate adaptive regression
 # * arima base
 recipe_spec_base_7 = recipe_spec_base  %>% step_naomit(starts_with("value_lag"))
-
+set.seed(253)
 workflow_fit_proph_7_lag = workflow() %>% add_model(model_spec_prophet) %>% add_recipe(recipe_spec_base_7) %>%fit(training(splits))
 
-calibration_tbl_7 = modeltime_table(workflow_fit_proph_7_lag) %>% modeltime_calibrate(new_data = testing(splits))
+# * glmnet
+recipe_spec_base_8 = recipe_spec_base %>% step_rm(Date,contains("_lag")) %>% step_ns(contains("index.num"),deg_free = 2) 
 
+workflow_fit_glm_8_lag = workflow() %>% add_model(model_spec_glmnet) %>% add_recipe(recipe_spec_base_8) %>% fit(training(splits))
+
+# * Mars
+workflow_fit_mars_10 = workflow() %>% add_model(model_spec_mars) %>% add_recipe(recipe_spec_base_1) %>% fit(training(splits))
+
+# * SVM
+set.seed(253)
+workflow_fit_svm_11 = workflow() %>% add_model(model_spec_svm) %>% add_recipe(recipe_spec_base_1) %>% fit(training(splits))
+workflow_fit_svm_12 = workflow() %>% add_model(model_spec_svm) %>% add_recipe(recipe_spec_base_2) %>% fit(training(splits))
+
+# workflow_fit_svm_13 = workflow() %>% add_model(model_spec_svm_rbf) %>% add_recipe(recipe_spec_base_1) %>% fit(training(splits))
+# workflow_fit_svm_14 = workflow() %>% add_model(model_spec_svm_rbf) %>% add_recipe(recipe_spec_base_2) %>% fit(training(splits))
+
+# * NNETAR
+
+workflow_fit_nnetar_13 = workflow() %>% add_model(model_spec_nnetar)%>% add_recipe(recipe_spec_base) %>% fit(training(splits)%>% drop_na())
 
 # Compare workflow --------------------------------------------------------
+# calibrate_and_plot(workflow_fit_nnetar_13)
 
-calibration_tbl_compare = modeltime_table(
-    workflow_fit_lm_1_spline,
-    workflow_fit_lm_2_lag,
-    workflow_fit_rf_3_lag,
-    workflow_fit_expsm_4_lag,
-    workflow_fit_ari_5_lag,
-    workflow_fit_ffnn_6_lag,
-    workflow_fit_proph_7_lag,
-    workflow_fit_glm_8_lag
-) %>%
-    modeltime_calibrate(new_data    = testing(splits))
-
-calibration_tbl_compare %>% modeltime_forecast(new_data= testing(splits),
-                                               actual_data = training(splits))%>% 
-    #Inversion
-    mutate(across(.value:.conf_hi, .fns = ~standardize_inv_vec(x=.,
-                                                               mean = std_mean,
-                                                               sd = standard_deviation))) %>%
-    mutate(across(.value:.conf_hi,.fns = ~log_interval_inv_vec(
-        x=.,
-        limit_lower = lower_limit,
-        limit_upper = upper_limit,
-        offset = offset
-    ))) %>%
+calibrate_and_plot = function(..., type = "testing"){
+    if( type == "testing"){
+        new_data = testing(splits)
+    }else {
+        new_data = training(splits) %>% drop_na()
+    }
     
-    plot_modeltime_forecast(.title = the_graph_title)
+    calibration_tbl = modeltime_table(...) %>%
+        modeltime_calibrate(new_data)
+    
+    print(calibration_tbl %>% modeltime_accuracy() %>% mutate(smape = round(smape/2,2) ) %>% drop_na())
+    
+    calibration_tbl %>% modeltime_forecast(new_data= forecast_tbl,
+                                           actual_data = data_prepared_tbl)%>% 
+        #Inversion
+        mutate(across(.value:.conf_hi, .fns = ~standardize_inv_vec(x=.,
+                                                                   mean = std_mean,
+                                                                   sd = standard_deviation))) %>%
+        mutate(across(.value:.conf_hi,.fns = ~log_interval_inv_vec(
+            x=.,
+            limit_lower = lower_limit,
+            limit_upper = upper_limit,
+            offset = offset
+        ))) %>%
+        
+        plot_modeltime_forecast(.conf_interval_show = F, .title = the_graph_title)
+    
+}
 
-calibration_tbl_compare %>% modeltime_accuracy() %>% mutate(smape = round(smape/2,2) )
+suppressWarnings(calibrate_and_plot(workflow_fit_lm_1_spline,
+                     workflow_fit_lm_2_lag,
+                     workflow_fit_rf_3_lag,
+                     workflow_fit_expsm_4_lag,
+                     workflow_fit_ari_5_lag,
+                     workflow_fit_ffnn_6_lag,
+                     workflow_fit_proph_7_lag,
+                     workflow_fit_glm_8_lag,
+                     workflow_fit_rf_9_lag,
+                     workflow_fit_mars_10,
+                     workflow_fit_svm_11,
+                     workflow_fit_svm_12,
+                     workflow_fit_nnetar_13)
+                 )
+
+calibrate_and_plot(workflow_fit_proph_7_lag)
 
 refit_tbl = calibration_tbl_compare %>% modeltime_refit(data = data_prepared_tbl)
 
@@ -266,27 +296,4 @@ refit_tbl %>% modeltime_accuracy() %>% mutate(smape = round(smape/2,2) )
  
 
 
-model_fit_smoothing = exp_smoothing(
-    error = "additive",
-    trend = "none",
-    season = "none"
-) %>% set_engine("ets") %>%
-    fit(value ~ ., training(splits)%>% select(-set_release,-new_printings))
 
-
-model_fit_seasonal = seasonal_reg(seasonal_period_1 = 7,
-             seasonal_period_2 = 21,
-             seasonal_period_3 = 40) %>%
-    set_engine("tbats")  %>%
-    fit(value ~ ., (training(splits) %>% select(-set_release,-new_printings)) )
-
-modeltime_table(
-    model_fit_smoothing,
-    model_fit_seasonal
-) %>% 
-    modeltime_calibrate(testing(splits)%>% select(-set_release,-new_printings)) %>%
-    modeltime_forecast(
-        new_data = testing(splits) %>% select(-set_release,-new_printings),
-        actual_data = data_prepared_tbl %>% select(-set_release,-new_printings)
-    ) %>%
-    plot_modeltime_forecast()
