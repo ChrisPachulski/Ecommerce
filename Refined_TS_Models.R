@@ -1,12 +1,12 @@
-devtools::install_github("tidymodels/tune")
-devtools::install_github("tidymodels/recipes", force = T, INSTALL_opts = '--no-lock')
-devtools::install_github("tidymodels/workflows")
-devtools::install_github("tidymodels/parsnip")
-
-# Modeltime & Timetk Development Versions
-# ----------------------------------------
-devtools::install_github("business-science/modeltime")
-devtools::install_github("business-science/timetk")
+# devtools::install_github("tidymodels/tune")
+# devtools::install_github("tidymodels/recipes", force = T, INSTALL_opts = '--no-lock')
+# devtools::install_github("tidymodels/workflows")
+# devtools::install_github("tidymodels/parsnip")
+# 
+# # Modeltime & Timetk Development Versions
+# # ----------------------------------------
+# devtools::install_github("business-science/modeltime")
+# devtools::install_github("business-science/timetk")
 pacman::p_load(tidyverse,timetk,lubridate,bigrquery,modeltime,recipes,rsample,kernlab,glmnet,kknn,earth,tidymodels,rules,doFuture,future,tune,plotly)
 
 gaeas_cradle <- function(email){
@@ -50,16 +50,16 @@ statement <- paste(
 )
 
 raw_query <- dbSendQuery(con, statement = statement) %>% dbFetch(., n = -1) %>% distinct()
-raw_query %>% filter(grepl("Scarab God",Key))
+raw_query %>% filter(grepl("Doubling Season",Key))
 
-the_graph_title = "The Scarab GodHour of DevastationM"
+the_graph_title = "Doubling SeasonBattlebondM"
 
 unique_card = raw_query[which(raw_query$Key == the_graph_title),] %>% mutate(Arb = ifelse(is.na(Arb), (MKT*(-1)),Arb ),
                                                                              BL = ifelse(is.na(BL), (0), BL ),
                                                                              BL_QTY = ifelse(is.na(BL_QTY), (0), BL_QTY ))
 
 statement <- paste(
-    "SELECT DISTINCT rdate, card, count(*) added_printings FROM `gaeas-cradle.roster.mtgjson`a WHERE card like '",unique(unique_card$Card),"' GROUP BY 1,2  ORDER BY rdate desc ",
+    'SELECT DISTINCT rdate, card, count(*) added_printings FROM `gaeas-cradle.roster.mtgjson`a WHERE card like "',unique(unique_card$Card),'" GROUP BY 1,2  ORDER BY rdate desc ',
     sep = ""
 )
 printings_xreg = dbSendQuery(con, statement = statement) %>% dbFetch(., n = -1) %>% distinct() %>% mutate(rdate = ymd(rdate))
@@ -68,6 +68,8 @@ printings_xreg = dbSendQuery(con, statement = statement) %>% dbFetch(., n = -1) 
 # modeltime ---------------------------------------------------------------
 
 unique_card_bl <- unique_card %>% select(Date,BL) %>% pivot_longer(-Date) %>% select(-name) %>% na.omit()
+
+unique_card_bl %>% plot_time_series(Date,value)
 
 unique_card_external_analytics_tbl = unique_card %>% select(-Arb,-Card) %>%
     fill(., .direction = "up")%>% summarise_by_time(Date,.by = "day", across(MKT:CK_ADJ_Rank,.fns =sum)) %>%
@@ -90,10 +92,10 @@ bl_prepared_tbl = unique_card_bl %>% summarise_by_time(.date_var = Date, .by = "
 
 
 lower_limit = 0
-upper_limit = 27.4
+upper_limit = 73.6
 offset = 1
-std_mean = 0.0238097218810935
-standard_deviation =  1.100113898328
+std_mean = -0.689071324948861
+standard_deviation = 1.07334670400685
 
 horizon = 30
 lag_period = 30
@@ -227,8 +229,10 @@ calibrate_and_plot = function(..., type = "testing"){
     
     print(calibration_tbl %>% modeltime_accuracy() %>% mutate(smape = round(smape/2,2) ) %>% drop_na())
     
-    calibration_tbl %>% modeltime_forecast(new_data= forecast_tbl,
-                                           actual_data = data_prepared_tbl)%>% 
+    chosen = calibration_tbl %>% modeltime_accuracy() %>% filter(mae <= min(mae)*2) %>% select(.model_desc)
+    
+    calibration_tbl %>% filter(.model_desc == chosen$.model_desc[1] | .model_desc == chosen$.model_desc[2]) %>% 
+        modeltime_forecast(new_data= forecast_tbl,actual_data = data_prepared_tbl)%>% 
         #Inversion
         mutate(across(.value:.conf_hi, .fns = ~standardize_inv_vec(x=.,
                                                                    mean = std_mean,
@@ -240,9 +244,10 @@ calibrate_and_plot = function(..., type = "testing"){
             offset = offset
         ))) %>%
         
-        plot_modeltime_forecast(.conf_interval_show = F, .title = the_graph_title)
+        plot_modeltime_forecast(.conf_interval_show = F, .title = the_graph_title, .interactive = F)
     
 }
+
 
 suppressWarnings(calibrate_and_plot(workflow_fit_lm_spline,
                                     workflow_fit_arima_lag,
@@ -296,10 +301,9 @@ grid_spec_nnetar_1 = grid_latin_hypercube(parameters(model_spec_nnetar_tune),siz
 wflw_nnetar_tune = wflw_fit_nnetar %>% update_recipe(recipe_spec_cv_lag) %>% update_model(model_spec_nnetar_tune)
 
 set.seed(253)
-registerDoFuture()
+
 #parallel::detectCores()
-plan(strategy = cluster,
-     workers  = parallel::makeCluster(2))
+
 tune_results_nnetar_1 = wflw_nnetar_tune %>% tune_grid(resamples = resamples_tscv_lag,
                                                        grid      = grid_spec_nnetar_1,
                                                        metrics   = default_forecast_accuracy_metric_set(),
@@ -316,10 +320,6 @@ grid_spec_nnetar_2 = grid_latin_hypercube(
     epochs(range = c(first_round$epochs[1],first_round$epochs[3])),
     size = 10)
 
-registerDoFuture()
-
-plan(strategy = cluster,
-     workers  = parallel::makeCluster(6))
 
 set.seed(253)
 tune_results_nnetar_2 = wflw_nnetar_tune %>% tune_grid(resamples = resamples_tscv_lag,
@@ -368,10 +368,6 @@ grid_spec_arima_1 = grid_latin_hypercube(parameters(model_spec_arima_tune),size 
 wflw_arima_tune = wflw_fit_arima %>% update_recipe(recipe_spec_cv_lag) %>% update_model(model_spec_arima_tune)
 
 set.seed(253)
-registerDoFuture()
-
-plan(strategy = cluster,
-     workers  = parallel::makeCluster(6))
 tune_results_arima_1 = wflw_arima_tune %>% tune_grid(resamples = resamples_tscv_lag,
                                                      grid      = grid_spec_arima_1,
                                                      metrics   = default_forecast_accuracy_metric_set(),
@@ -390,9 +386,6 @@ grid_spec_arima_2 = grid_latin_hypercube(
     seasonal_ma(range = c(first_round$seasonal_ma[1],first_round$seasonal_ma[3])),
     size = 10) %>% rename("seasonal_period" = "period")
 
-registerDoFuture()
-plan(strategy = cluster,
-     workers  = parallel::makeCluster(6))
 
 set.seed(253)
 tune_results_arima_2 = wflw_arima_tune %>% tune_grid(resamples = resamples_tscv_lag,
@@ -418,7 +411,7 @@ wflw_fit_prophet = calibration_tbl %>% pluck_modeltime_model(3)
 set.seed(253)
 resamples_kfold = vfold_cv(training(splits) %>% drop_na(),v = 10)
 
-resamples_kfold %>% tk_time_series_cv_plan() %>% plot_time_series_cv_plan(Date, value, .facet_ncol = 2)
+#resamples_kfold %>% tk_time_series_cv_plan() %>% plot_time_series_cv_plan(Date, value, .facet_ncol = 2)
 
 wflw_fit_prophet %>% pull_workflow_spec()
 
@@ -445,11 +438,6 @@ grid_spec_prophet_1 = grid_latin_hypercube(
 )
 
 set.seed(253)
-registerDoFuture()
-
-plan(strategy = cluster,
-     workers  = parallel::makeCluster(6))
-
 tune_results_prophet_1 = wflw_fit_prophet %>% 
     update_model(model_spec_prophet_boost) %>% 
     tune_grid(resamples = resamples_kfold,
@@ -474,9 +462,6 @@ grid_spec_prophet_2 = grid_latin_hypercube(
     loss_reduction(range = c(first_round$loss_reduction[1],first_round$loss_reduction[3])),
     size = 10) 
 
-registerDoFuture()
-plan(strategy = cluster,
-     workers  = parallel::makeCluster(6))
 
 set.seed(253)
 tune_results_prophet_2 = wflw_fit_prophet  %>% 
