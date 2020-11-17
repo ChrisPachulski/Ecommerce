@@ -1,4 +1,13 @@
-pacman::p_load(tidyverse,timetk,lubridate,bigrquery,modeltime,recipes,rsample)
+# devtools::install_github("tidymodels/tune")
+# devtools::install_github("tidymodels/recipes", force = T, INSTALL_opts = '--no-lock')
+# devtools::install_github("tidymodels/workflows")
+# devtools::install_github("tidymodels/parsnip")
+# 
+# # Modeltime & Timetk Development Versions
+# # ----------------------------------------
+# devtools::install_github("business-science/modeltime")
+# devtools::install_github("business-science/timetk")
+pacman::p_load(tidyverse,timetk,lubridate,bigrquery,modeltime,recipes,rsample,kernlab,glmnet,kknn,earth,tidymodels,rules,doFuture,future,tune,plotly)
 
 gaeas_cradle <- function(email){
     con <- dbConnect(
@@ -23,450 +32,108 @@ tcg_sr_rr <- function(email){
     options(scipen = 20)
     con
 }
-
-
 con <- gaeas_cradle("wolfoftinstreet@gmail.com")
-con <- tcg_sr_rr("wolfoftinstreet@gmail.com")
-statement <- "With t1 as (SELECT DISTINCT a.Key, a.Card_name,a.Set,a.Rarity,a.MKT_EST,a.MKT,a.Vendor_Listings,a.Set_Rank,a.Date 
-    FROM `tcg-sr-rr.rivals_of_ixalan.*` a 
-    WHERE a._TABLE_SUFFIX BETWEEN 
-        FORMAT_DATE('%Y_%m_%d', DATE_SUB(CURRENT_DATE(), INTERVAL 30 DAY)) AND  
-        FORMAT_DATE('%Y_%m_%d', DATE_SUB(CURRENT_DATE(), INTERVAL -1 DAY)) AND 
-    a.Rarity like 'M' AND Methodology like 'SR'), 
-    t2 as( 
-    SELECT * 
-    FROM `gaeas-cradle.premiums.*` b 
-    WHERE b._TABLE_SUFFIX BETWEEN 
-        FORMAT_DATE('%Y_%m_%d', DATE_SUB(CURRENT_DATE(), INTERVAL 30 DAY)) AND  
-        FORMAT_DATE('%Y_%m_%d', DATE_SUB(CURRENT_DATE(), INTERVAL -1 DAY)) AND 
-    b.Rarity like 'M') 
-    SELECT a.Key, a.Card_name,a.Set,a.Rarity,a.MKT_EST,a.MKT,b.BL,b.BL_QTY,a.Vendor_Listings,a.Set_Rank,a.Date 
-    from t1 a 
-    Left join t2 b on CONCAT(a.Key,' ',a.Date) = CONCAT(b.Key,' ',b.Date) 
-    ORDER BY Card_name,Date "
-raw_query <- dbSendQuery(con, statement = statement) %>% dbFetch(., n = -1) %>% distinct() %>% mutate(Arb = BL - MKT)
-raw_query %>% glimpse()
-raw_query %>% mutate(Date = format(Date, "%m/%d/%Y"))
+statement <- paste("SELECT DISTINCT rdate, a.set FROM `gaeas-cradle.roster.mtgjson`a ORDER BY rdate desc")
+set_dates_xreg = dbSendQuery(con, statement = statement) %>% dbFetch(., n = -1) %>% distinct() %>% 
+    mutate(set_release = 1, rdate = ymd(rdate)) %>% pad_by_time(.date_var =rdate) %>%
+    select(-set) %>% replace(is.na(.),0) 
 
-
-con <- gaeas_cradle("wolfoftinstreet@gmail.com")
 statement <- paste(
-    "SELECT a.Key,a.MKT,a.Sellers,a.BL,a.BL_QTY,a.Arb,a.TCG_Rank,a.CK_ADJ_Rank,a.Date ",
+    "SELECT a.Key,a.Card,a.MKT,a.Sellers,a.BL,a.BL_QTY,a.Arb,a.TCG_Rank,a.CK_ADJ_Rank,a.Date ",
     "FROM `gaeas-cradle.premiums.*` a ",
     'WHERE Foil_Status not like "%FOIL%" and (Rarity like "R" or Rarity like "M" or Rarity like "U") and a.Set is not NULL and param is not NULL ',
     'and _TABLE_SUFFIX BETWEEN ',
-    'FORMAT_DATE("%Y_%m_%d", DATE_SUB(CURRENT_DATE(), INTERVAL 180 DAY)) AND ',
+    'FORMAT_DATE("%Y_%m_%d", DATE_SUB(CURRENT_DATE(), INTERVAL 300 DAY)) AND ',
     'FORMAT_DATE("%Y_%m_%d", DATE_SUB(CURRENT_DATE(), INTERVAL -1 DAY)) ',
     "Order By Date asc; ",
     sep = ""
 )
+
 raw_query <- dbSendQuery(con, statement = statement) %>% dbFetch(., n = -1) %>% distinct()
-raw_query %>% glimpse()
-raw_query %>% mutate(Date = format(Date, "%m/%d/%Y"))
-raw_query %>% filter(grepl("Taigam, Ojutai Master",Key))
-unique_card = raw_query[which(raw_query$Key == "Taigam, Ojutai MasterCommander 2017R"),] %>% mutate(Arb = ifelse(is.na(Arb), (MKT*(-1)),Arb ),
-                                                                                                    BL = ifelse(is.na(BL), (0), BL ),
-                                                                                                    BL_QTY = ifelse(is.na(BL_QTY), (0), BL_QTY ))
+raw_query %>% filter(grepl("Crucible of Worlds",Key)) %>% arrange(desc(Date))
 
-unique_card_summary <- unique_card %>% select(Date,everything()) %>% select(-Key) %>% pivot_longer(-Date) %>% group_by(name)
+the_graph_title = "Jace, the Mind SculptorEternal MastersM"
+read_table(unique_card)
+unique_card = raw_query[which(raw_query$Key == the_graph_title),] %>% mutate(Arb = ifelse(is.na(Arb), (MKT*(-1)),Arb ),
+                                                                             BL = ifelse(is.na(BL), (0), BL ),
+                                                                             BL_QTY = ifelse(is.na(BL_QTY), (0), BL_QTY ))
 
-unique_card_summary %>% plot_time_series(Date,log1p(abs(value)),name)
-
-unique_card_summary %>% plot_time_series(Date,expm1(log1p(abs(value))),name)
-
-
-unique_card_summary %>% plot_time_series(Date,box_cox_vec(value + 1, lambda = "auto"),name)
-
-box_coxed <- unique_card_summary %>% mutate(value_trans = box_cox_vec(value)) %>% group_split() %>%
-    map2(.y=1:6, .f =  function(df,idx){
-        if(idx==1) lambda = 1.99995900720725
-        if(idx==2) lambda = -0.234680344678062
-        if(idx==3) lambda = -0.99992424816297
-        if(idx==4) lambda = -0.99992424816297
-        if(idx==5) lambda = 1.99992424816297
-        if(idx==6) lambda = -0.00371706262469994
-        
-        df %>%
-            mutate(value_trans_inv = box_cox_inv_vec(value_trans, lambda = lambda))
-    }) %>%
-    bind_rows() 
-
-box_coxed %>%
-    group_by(name) %>%
-    plot_time_series(Date, value_trans)
-
-unique_card %>% select(Date,everything()) %>% select(-Key,-Arb)
+statement <- paste(
+    'SELECT DISTINCT rdate, card, count(*) added_printings FROM `gaeas-cradle.roster.mtgjson`a WHERE card like "',unique(unique_card$Card),'" GROUP BY 1,2  ORDER BY rdate desc ',
+    sep = ""
+)
+printings_xreg = dbSendQuery(con, statement = statement) %>% dbFetch(., n = -1) %>% distinct() %>% mutate(rdate = ymd(rdate))
 
 
-# Rolling Median/Averages -------------------------------------------------
+# modeltime ---------------------------------------------------------------
 
-unique_card %>% select(Date,everything()) %>% select(-Key) %>% 
-    mutate(MKT = MKT %>% slidify_vec(.f = mean,.period=7,.align = "right",.partial =T),
-           Vendor_Listings = Vendor_Listings %>% slidify_vec(.f = mean,.period=7,.align = "right",.partial =T),
-           BL = BL %>% slidify_vec(.f = mean,.period=7,.align = "right",.partial =T),
-           BL_QTY = BL_QTY %>% slidify_vec(.f = mean,.period=7,.align = "right",.partial =T),
-           Set_Rank = Set_Rank %>% slidify_vec(.f = mean,.period=7,.align = "right",.partial =T),
-           Arb = Arb %>% slidify_vec(.f = mean,.period=7,.align = "right",.partial =T),
-           MKT_EST = MKT_EST %>% slidify_vec(.f = mean,.period=7,.align = "right",.partial =T)) %>%
-    #slice(-c(1:6)) %>%
-    select(-Set,-Rarity,-Card_name) %>% 
-    pivot_longer(-Date) %>% group_by(name) %>% plot_time_series(Date,value)
+unique_card_bl <- unique_card %>% select(Date,BL) %>% pivot_longer(-Date) %>% select(-name) %>% na.omit()
 
+unique_card_bl %>% plot_time_series(Date,value)
 
-unique_card %>% select(Date,everything()) %>% select(-Key) %>% 
-    mutate(MKT = MKT %>% slidify_vec(.f = median,.period=7,.align = "center",.partial =T),
-           Vendor_Listings = Vendor_Listings %>% slidify_vec(.f = median,.period=7,.align = "center",.partial =T),
-           BL = BL %>% slidify_vec(.f = median,.period=7,.align = "center",.partial =T),
-           BL_QTY = BL_QTY %>% slidify_vec(.f = median,.period=7,.align = "center",.partial =T),
-           Set_Rank = Set_Rank %>% slidify_vec(.f = median,.period=7,.align = "center",.partial =T),
-           Arb = Arb %>% slidify_vec(.f = mean,.period=7,.align = "center",.partial =T),
-           MKT_EST = MKT_EST %>% slidify_vec(.f = median,.period=7,.align = "center",.partial =T)) %>%
-    #slice(-c(1:6)) %>%
-    select(-Set,-Rarity,-Card_name) %>% 
-    pivot_longer(-Date) %>% group_by(name) %>% plot_time_series(Date,value)
+unique_card_external_analytics_tbl = unique_card %>% select(-Arb,-Card) %>%
+    fill(., .direction = "up")%>% summarise_by_time(Date,.by = "day", across(MKT:CK_ADJ_Rank,.fns =sum)) %>%
+    mutate(across(MKT:CK_ADJ_Rank, .fns = log1p)) %>% fill(MKT,Sellers,BL,BL_QTY,TCG_Rank,CK_ADJ_Rank) %>% 
+    mutate(across(MKT:CK_ADJ_Rank, .fns = standardize_vec)) %>% select(-BL)
 
-# Loess Smoother ----------------------------------------------------------
-#uses a proportion of the data to model the non-linear fit & is combined with a K-nearest neighbor meta model
-# Loess comes up in STL Decomposition and is commonly used to plot a trend
-
-unique_card %>% select(Date,everything()) %>% select(-Key) %>%
-    mutate(MKT = smooth_vec(MKT,period = 7),
-           Vendor_Listings = smooth_vec(Vendor_Listings,period = 7),
-           BL = smooth_vec(BL,period = 7),
-           BL_QTY = smooth_vec(BL_QTY,period = 7),
-           Set_Rank = smooth_vec(Set_Rank,period = 7),
-           Arb = smooth_vec(Arb,period = 7),
-           MKT_EST = smooth_vec(MKT_EST,period = 7)) %>%
-    select(-Set,-Rarity,-Card_name) %>% 
-    pivot_longer(-Date) %>% group_by(name) %>% plot_time_series(Date,value)
-
-
-# Rolling Correlation -----------------------------------------------------
-rolling_cor_week <- slidify(
-    .f = ~ cor(.x,.y,use = "pairwise.complete.obs"),
-    .period = 7,
-    .align = "center",
-    .partial = T
-) 
-unique_card %>% select(Date,everything()) %>% select(-Key)  %>%
-    select(Date,MKT,Vendor_Listings) %>%
-    mutate(rolling_cor_VL_MKT = rolling_cor_week(Vendor_Listings,MKT)) %>%
-    pivot_longer(-Date) %>%
-    group_by(name) %>% na.omit() %>%
-    plot_time_series(Date, value)
-
-
-unique_card %>% select(Date,everything()) %>% select(-Key,-Set,-Rarity,-Card_name) %>% pivot_longer(-Date) %>%
-    group_by(name)   
-
-
-# Cleaning Outliers -------------------------------------------------------
-
-unique_card %>% 
-    select(Date,everything()) %>% 
-    select(-Key) %>% 
-    mutate(Arb = ts_clean_vec(Arb, period = 7),
-           BL = ts_clean_vec(BL, period = 7),
-           BL_QTY = ts_clean_vec(BL_QTY, period = 7),
-           TCG_Rank = ts_impute_vec(TCG_Rank, period = 7),
-           Sellers = ts_impute_vec(Sellers, period = 7)) %>%
-    pivot_longer(-Date) %>%
-    plot_anomaly_diagnostics(Date, value)
-
-
-#Before Cleaning
-unique_card %>% 
-    select(Date,everything()) %>% 
-    select(-Key) %>% 
-    pivot_longer(-Date) %>%
-    plot_time_series_regression(Date,
-                                .formula = value ~ as.numeric(Date) + wday(Date, label = T) + month(Date, label = T), .show_summary = T)
-
-#After Cleaning
-unique_card %>% 
-    select(Date,everything()) %>% 
-    select(-Key) %>%
-    mutate(Arb = ts_clean_vec(Arb, period = 7),
-           BL = ts_clean_vec(BL, period = 7),
-           BL_QTY = ts_clean_vec(BL_QTY, period = 7),
-           TCG_Rank = ts_impute_vec(TCG_Rank, period = 7),
-           Sellers = ts_impute_vec(Sellers, period = 7)) %>%
-    pivot_longer(-Date) %>%
-    plot_time_series_regression(Date,
-                                .formula = value ~ as.numeric(Date) + wday(Date, label = T) + month(Date, label = T), .show_summary = T)
-
-
-# lags --------------------------------------------------------------------
-
-unique_card %>% 
-    select(Date,everything()) %>% 
-    select(Date, BL)  %>%
-    pivot_longer(-Date) %>%
-    plot_acf_diagnostics(Date, log1p(value) )
-
-
-unique_card %>% 
-    select(Date,everything()) %>% 
-    select(Date, BL)  %>%
-    pivot_longer(-Date) %>%
-    tk_augment_lags(.value = value, .lags = c(28,41,74)) %>%
-    drop_na() %>%
-    plot_time_series_regression(
-        Date,
-        .formula = log1p(value) ~ log1p(value_lag28) +log1p(value_lag41) +log1p(value_lag74), .show_summary = T
-    )
-
-
-# Time Series Growth - cumsum ---------------------------------------------
-
-unique_card %>% 
-    select(Date,everything()) %>% 
-    select(Date, BL)  %>%
-    mutate(BL_lag = lag(BL), BL = BL - BL_lag) %>% slice(-1) %>%
-    mutate(BL_growth = cumsum(BL)) %>%
-    plot_time_series(Date, BL_growth, .smooth = F, .legend_show = T, .title = "Corsair Captain - CK BL Growth")
-
-unique_card %>% 
-    select(Date,everything()) %>% 
-    select(Date, Sellers)  %>%
-    mutate(Sellers = ts_impute_vec(Sellers, period = 7),BL_lag = lag(Sellers), Sellers_lag = Sellers - BL_lag) %>% slice(-1) %>%
-    mutate(Sellers_growth = cumsum(Sellers_lag),
-           Seller_velocity = diff_vec(Sellers_growth, lag = 1),
-           Seller_acceleration = diff_vec(Sellers_growth, lag = 2))%>% select(-BL_lag) %>%
-    pivot_longer(-Date) %>%
-    group_by(name) %>%
-    plot_time_series(Date, value, name, .smooth = F, .legend_show = T, .title = "Corsair Captain - TCG Sellers Growth")
-
-unique_card %>% 
-    select(Date,everything()) %>% 
-    mutate(Sellers = ts_impute_vec(Sellers, period = 7),
-           TCG_Rank = ts_impute_vec(TCG_Rank, period = 7),
-           CK_ADJ_Rank = ts_impute_vec(CK_ADJ_Rank,period = 7))%>%
-    mutate(across(MKT:CK_ADJ_Rank, .fns = diff_vec)) %>% select(-Key, - TCG_Rank, -CK_ADJ_Rank) %>%
-    pivot_longer(-Date) %>%
-    plot_time_series(Date,value,.smooth = F)
-
-
-# Fourier Analysis --------------------------------------------------------
-
-model_formula <- as.formula(value ~ as.numeric(Date) + . - Date + 
-                                wday(Date, label = T) + 
-                                ceiling(day(Date) / 7))
-
-transformed_unique <- unique_card %>% 
-    select(Date,everything()) %>%
-    select(-Key & -Arb) %>%
-    mutate(Sellers = ts_impute_vec(Sellers, period = 7),
-           TCG_Rank = ts_impute_vec(TCG_Rank, period = 7),
-           CK_ADJ_Rank = ts_impute_vec(CK_ADJ_Rank,period = 7)) %>%
-    mutate(across(MKT:CK_ADJ_Rank, .fns = log_interval_vec)) %>%
-    tk_augment_fourier(Date, .period = c(1,3,7,14,21,30), .K = 1) 
-
-transformed_unique %>%pivot_longer(-Date) %>% plot_time_series_regression(Date,
-                                                                          .formula = model_formula,
-                                                                          .show_summary = T)
-
-lm_model_fit <- lm(formula = model_formula, data = transformed_unique%>%pivot_longer(-Date))
-summary(lm_model_fit)
-
-
-future_tbl <- transformed_unique %>% future_frame(.date_var = Date,.length_out = "2 months") %>%
-    mutate(MKT=NA, Sellers=NA, BL=NA,BL_QTY=NA,TCG_Rank=NA,CK_ADJ_Rank=NA) %>%
-    tk_augment_fourier(Date, .period = c(1,3,7,14,21,30), .K = 1)  #%>% pivot_longer(-Date)
-
-palantir = predict(lm_model_fit,newdata = future_tbl %>% pivot_longer(-Date)) %>% as.vector()
-
-conf_interval = .75
-residuals = lm_model_fit$residuals %>% as.vector()
-alpha = (1- conf_interval)/2
-
-abs_error_range = abs(qnorm(alpha) * sd(residuals))
-
-forecast_tbl <- transformed_unique %>% pivot_longer(-Date)%>% 
-    add_column(type = "actual") %>%
-    bind_rows(
-        future_tbl %>% pivot_longer(-Date) %>%
-            mutate(value = palantir,
-                   type = "prediction")
-    ) %>% mutate(
-        conf_lo = value - abs_error_range,
-        conf_high = value + abs_error_range)
-
-forecast_tbl %>% filter(name == "Sellers") %>%  na.omit() %>%
-    rename(Sellers = name) %>%
-    pivot_longer(cols = c(value,conf_lo,conf_high)) %>% 
-    plot_time_series(Date, 
-                     log_interval_inv_vec(x = value,
-                                          limit_lower = 0,
-                                          limit_upper = 416.8,
-                                          offset = 0),
-                     .color_var = name, .smooth = F)
-
-
-# tk_augment --------------------------------------------------------------
-
-
-unique_card_bl <- unique_card %>% select(Date,MKT) %>% pivot_longer(-Date) %>% select(-name) 
-
-bl_prepared_tbl = unique_card_bl %>% summarise_by_time(Date, .by = "day",value = sum(value)
-) %>% pad_by_time(.pad_value = 0
-) %>% na.omit(
+#unique_card_bl %>% View()
+bl_prepared_tbl = unique_card_bl %>% summarise_by_time(.date_var = Date, .by = "day",value = sum(value)
+) %>% pad_by_time(.date_var = Date,.pad_value = 0
 ) %>% mutate(bl_trans = log_interval_vec(value,limit_lower = 0, offset = 1)
 ) %>% mutate(bl_trans = standardize_vec(bl_trans)
 ) %>% mutate(bl_trans_clean = ts_clean_vec(bl_trans, period = 7)
 ) %>% select(-value, -bl_trans
 ) %>% pivot_longer(contains("trans")
+) %>% select(-name
 ) 
 
-bl_prepared_tbl %>%
-    plot_time_series(Date,value,name)
-
-unique_card %>% select(Date,MKT) %>% pivot_longer(-Date) %>% select(-name) %>%plot_time_series(Date,value)
-
-bl_signature_tbl = bl_prepared_tbl %>%
-    tk_augment_timeseries_signature(.date_var = Date
-    ) %>% select(-diff, -contains("hour"),-contains("minute"),-contains("second"),-contains("name"),-contains("am.pm"),-ends_with("iso"),-ends_with(".xts")
-    ) 
-
-bl_signature_tbl %>% glimpse()
-
-bl_signature_seasonality_formula = as.formula(
-    value ~ splines::ns(index.num, knots = quantile(index.num, probs = c(.33,.66))) 
-    + .
-    + (as.factor(mday7) * wday.lbl)
-)
-
-bl_signature_tbl %>%
-    plot_time_series_regression(
-        Date,
-        .formula = bl_signature_seasonality_formula,
-        .show_summary = T
-    )
-
-
-bl_signature_tbl %>% plot_acf_diagnostics(Date,value)
-
-bl_fourier_tbl = bl_signature_tbl %>%
-    tk_augment_fourier(Date,.periods = c(15,40,60,130), .K =2)
-
-bl_fourier_seasonality_formula = as.formula(
-    value ~ splines::ns(index.num, knots = quantile(index.num, probs = c(.33,.66))) 
-    + .
-    + (as.factor(mday7) * wday.lbl)
-)
-
-bl_fourier_tbl %>%
-    plot_time_series_regression(
-        Date,
-        .formula = bl_fourier_seasonality_formula,
-        .show_summary = T
-    )
-
-bl_fourier_tbl %>% plot_time_series(Date,value,.interactive=F) +
-    geom_point(color="red",data = . %>% filter(mday7 == 3))
-
-
-# Chosen Model ------------------------------------------------------------
-unique_card_bl <- unique_card %>% select(Date,BL) %>% pivot_longer(-Date) %>% select(-name) 
-
-
-bl_prepared_tbl = unique_card_bl %>% summarise_by_time(Date, .by = "day",value = sum(value)
-) %>% pad_by_time(.pad_value = 0
-) %>% mutate(bl_trans = log_interval_vec(value,limit_lower = 0, offset = 1)
-) %>% mutate(bl_trans = standardize_vec(bl_trans)
-) %>% mutate(bl_trans_clean = ts_clean_vec(bl_trans, period = 7)
-) %>% select(-value, -bl_trans
-) %>% pivot_longer(contains("trans")
-) %>% select(-name)
+# bl_prepared_tbl %>%
+# plot_acf_diagnostics(Date,value,.ccf_vars = MKT:CK_ADJ_Rank,.show_ccf_vars_only=T)
 
 lower_limit = 0
-upper_limit = 5.95
+upper_limit = 97.8
 offset = 1
-mean = -0.197600649674408
-standard_deviation = 0.585606035392674
+std_mean = -0.328930096161146
+standard_deviation = 1.12771417639022
+
+# bl_prepared_tbl = unique_card_bl %>% summarise_by_time(.date_var = Date, .by = "day",value = sum(value)
+# ) %>% pad_by_time(.date_var = Date,.pad_value = 0
+# )
+
 
 horizon = 30
 lag_period = 30
-rolling_periods = c(15,30,45)
+rolling_periods = c(7,14,21)
 
-bl_prepared_tbl %>% plot_time_series(Date,value)
-
-
-
-
-
-
-bl_signature_tbl = bl_prepared_tbl %>%
-    tk_augment_timeseries_signature(.date_var = Date
-    ) %>% select(-diff, -contains("hour"),-contains("minute"),-contains("second"),-contains("name"),-contains("am.pm"),-ends_with("iso"),-ends_with(".xts")
-    ) 
-
-bl_fourier_tbl = bl_signature_tbl %>%
-    tk_augment_fourier(Date,.periods = c(15,40,60,130), .K =2)
-
-bl_fourier_tbl %>% glimpse()
-
-bl_fourier_seasonality_formula = as.formula(
-    value ~ splines::ns(index.num, knots = quantile(index.num, probs = c(.33,.66))) 
-    + .
-    + (as.factor(mday7) * wday.lbl)
-    + (as.factor(week) * mday)
-)
-
-bl_fourier_tbl %>%
-    plot_time_series_regression(
-        Date,
-        .formula = bl_fourier_seasonality_formula,
-        .show_summary = T
-    )
-
-#Linear Regression
-best_lm_model = lm(bl_fourier_seasonality_formula, data = bl_fourier_tbl)
-#in theory save this but Im excited for actual modeling
-
-
-
-# Modeling ----------------------------------------------------------------
-
-unique_card_bl <- unique_card %>% select(Date,MKT) %>% pivot_longer(-Date) %>% select(-name) 
-
-
-bl_prepared_tbl = unique_card_bl %>% summarise_by_time(Date, .by = "day",value = sum(value)
-) %>% pad_by_time(.pad_value = 0
-) %>% mutate(bl_trans = log_interval_vec(value,limit_lower = 0, offset = 1)
-) %>% mutate(bl_trans = standardize_vec(bl_trans)
-) %>% mutate(bl_trans_clean = ts_clean_vec(bl_trans, period = 7)
-) %>% select(-value, -bl_trans
-) %>% pivot_longer(contains("trans")
-) %>% select(-name)
-
-lower_limit = 0
-upper_limit = 9.646
-offset = 1
-std_mean = -0.0226959514803494
-standard_deviation = 0.69247676649603
-
-horizon = 30
-lag_period = 30
-rolling_periods = c(3,7,14,21,28)
-
-bl_prepared_tbl %>%
-    #tk_augment_lags(value,.lags = lag_period) %>%
-    tk_augment_slidify(.value = value,
-                       .f = median, 
-                       .period = rolling_periods)
-
+#data_prepared_full_tbl %>% view()
 data_prepared_full_tbl = bl_prepared_tbl                       %>%
     bind_rows(
         future_frame(.data = .,.date_var = Date,.length_out = horizon)
     )                                                          %>% 
     # tk_augment_fourier(Date,.periods = c(15,40,60,130), .K =2) %>%
-     tk_augment_lags(value,.lags = lag_period)                  %>%
-     tk_augment_slidify(.value   = value_lag30,
-                        .f       = median, 
-                        .period  = rolling_periods,
-                        .align   = "center",
-                        .partial = T)
+    tk_augment_lags(value,.lags = lag_period)                  %>%
+    tk_augment_slidify(.value   = value_lag30,
+                       .f       = median, 
+                       .period  = rolling_periods,
+                       .align   = "center",
+                       .partial = T) %>% 
+    left_join(set_dates_xreg, by = c("Date"="rdate")) %>%
+    left_join(printings_xreg %>% select(-card), by = c("Date"="rdate")) %>% 
+    distinct() %>% 
+    mutate(printings = ifelse(min(printings_xreg$rdate)<Date[1], 
+                              sum(added_printings[1], sum(printings_xreg %>% 
+                                                              filter(rdate<min(bl_prepared_tbl$Date)) %>% 
+                                                              select(added_printings)),na.rm=T))) 
+data_prepared_full_tbl = data_prepared_full_tbl %>% 
+    mutate(added_printings = ifelse(is.na(added_printings),0,added_printings),
+           new_printings = ifelse( (added_printings==0) & (printings > added_printings), printings, added_printings + printings) ) %>%
+    select(-added_printings,-printings)
+
+for(i in 1:nrow(data_prepared_full_tbl)){
+    if(data_prepared_full_tbl$new_printings[i+1]<data_prepared_full_tbl$new_printings[i]){data_prepared_full_tbl$new_printings[i+1]=data_prepared_full_tbl$new_printings[i]}
+    if(i+1 == nrow(data_prepared_full_tbl)){break}
+}
+
 
 
 data_prepared_tbl = data_prepared_full_tbl %>% filter(!is.na(value))
@@ -475,10 +142,10 @@ forecast_tbl = data_prepared_full_tbl %>% filter(is.na(value))
 splits = time_series_split(data_prepared_tbl, assess = horizon, cumulative = T)
 
 
-best_lm_model$terms %>% formula()
+#best_lm_model$terms %>% formula()
 
 recipe_spec_base = recipe(value ~ ., data = training(splits)) %>%
-        #Time series signature
+    #Time series signature
     step_timeseries_signature(Date) %>%
     step_rm(matches("(iso)|(hour)|(minute)|(second)|(am.pm)|(xts)|(year)")) %>%
     #stnadardization
@@ -486,94 +153,424 @@ recipe_spec_base = recipe(value ~ ., data = training(splits)) %>%
     #dummy Encoding
     step_dummy(all_nominal(),one_hot = T) %>%
     step_interact(~matches("mday7") * matches("wday.lbl")) %>%
-    step_fourier(Date, period = c(15,40,60,130), K =2)
+    step_fourier(Date, period = c(4,10,20,40), K =2)
 
-recipe_spec_base %>% prep() %>% juice() %>% glimpse()
+#recipe_spec_base %>% prep() %>% juice() %>% glimpse() 
+recipe_spec_base_spline = recipe_spec_base %>% step_rm(Date,contains("_lag")) %>% step_ns(contains("index.num"),deg_free = 4)
+recipe_spec_base_lag = recipe_spec_base %>% step_rm(Date) %>% step_naomit(starts_with("value_lag"))
+recipe_spec_base_dated_lag = recipe_spec_base  %>% step_naomit(starts_with("value_lag"))
+# Models ------------------------------------------------------------------
+# * 1
+model_spec_lm = linear_reg(mode = "regression",
+                           penalty = 50, 
+                           mixture = .5) %>% 
+    set_engine("lm")
 
-
-# Spline Model ------------------------------------------------------------
-# lm
-model_spec_lm = linear_reg() %>% set_engine("lm")
-model_spec_bayes = linear_reg() %>% set_engine("stan")
-# spline model    
-
-recipe_spec_base %>% prep() %>% juice() %>% glimpse()
-
-recipe_spec_base_1 = recipe_spec_base %>% step_rm(Date,contains("_lag")) %>% step_ns(contains("index.num"),deg_free = 2) 
-
-recipe_spec_base_1 %>% prep() %>% juice() %>% glimpse()
-
-#spline workflow
-workflow_fit_lm_1_spline = workflow() %>%
-    add_model(model_spec_lm) %>%
-    add_recipe(recipe_spec_base_1) %>%
-    fit(training(splits))
-
-workflow_fit_lm_1_spline %>% pull_workflow_fit() %>% pluck("fit") %>% summary()
-# Modeltime workflow ------------------------------------------------------
-
-calibration_tbl = modeltime_table(workflow_fit_lm_1_spline) %>%
-    modeltime_calibrate(new_data = testing(splits))
-
-calibration_tbl %>% modeltime_forecast(new_data    = testing(splits),
-                                       actual_data = data_prepared_tbl) %>% plot_modeltime_forecast()
-
-calibration_tbl %>% modeltime_accuracy()
-
-# * Lag Recipe 
-recipe_spec_base %>% prep() %>% juice() %>% glimpse()
-
-recipe_spec_base_2 = recipe_spec_base %>% step_rm(Date) %>% step_naomit(starts_with("value_lag"))
-
-recipe_spec_base_2 %>% prep() %>% juice() %>% glimpse()
-
-workflow_fit_lm_2_lag = workflow() %>%
-    add_model(model_spec_lm) %>%
-    add_recipe(recipe_spec_base_2) %>%
-    fit(training(splits))
-
-workflow_fit_lm_2_lag %>% pull_workflow_fit() %>% pluck("fit") %>% summary()
-
-calibration_tbl_2 = modeltime_table(workflow_fit_lm_2_lag) %>%
-    modeltime_calibrate(new_data = testing(splits))
-
-calibration_tbl_2 %>% modeltime_forecast(new_data    = testing(splits),
-                                       actual_data = data_prepared_tbl) %>% plot_modeltime_forecast()
-
-calibration_tbl_2 %>% modeltime_accuracy()
-
-# Bayesian Recipe 
+workflow_fit_lm_spline = workflow() %>% add_model(model_spec_lm) %>% add_recipe(recipe_spec_base_spline) %>% fit(training(splits))
 
 
+# * 2
+model_spec_arima = arima_boost(mode = "regression") %>% 
+    set_engine("auto_arima_xgboost")
 
-# Compare workflow --------------------------------------------------------
+workflow_fit_arima_lag = workflow() %>% add_model(model_spec_arima) %>% add_recipe(recipe_spec_base_dated_lag) %>% fit(training(splits))
 
-calibration_tbl_compare = modeltime_table(
-    workflow_fit_lm_1_spline,
-    workflow_fit_lm_2_lag
-) %>%
-    modeltime_calibrate(new_data    = testing(splits))
+# * 3
+model_spec_prophet = prophet_boost(mode="regression", 
+                                   min_n              = 7, 
+                                   tree_depth         = 10, 
+                                   trees              = 30,
+                                   changepoint_num    = 10, 
+                                   changepoint_range  = .95, 
+                                   learn_rate         = .01,
+                                   seasonality_yearly = F,
+                                   seasonality_weekly = F,
+                                   seasonality_daily  = F) %>% 
+    set_engine("prophet_xgboost") 
 
-calibration_tbl_compare %>% modeltime_forecast(new_data= testing(splits),
-                                               actual_data = data_prepared_tbl)%>% plot_modeltime_forecast()
+set.seed(253)
+workflow_fit_prophet_lag = workflow() %>% add_model(model_spec_prophet) %>% add_recipe(recipe_spec_base_dated_lag) %>%fit(training(splits))
 
-calibration_tbl_compare %>% modeltime_accuracy()
+# * 4
+model_spec_glmnet = linear_reg(penalty = 0.75,
+                               mixture   = 0.15) %>% 
+    set_engine("glmnet")
 
-refit_tbl = calibration_tbl_compare %>% modeltime_refit(data = data_prepared_tbl)
+workflow_fit_glmnet_spline = workflow() %>% add_model(model_spec_glmnet) %>% add_recipe(recipe_spec_base_spline) %>% fit(training(splits))
 
-refit_tbl %>% modeltime_forecast(new_data= forecast_tbl,
-                                 actual_data = data_prepared_tbl)%>% 
-    #Inversion
-    mutate(across(.value:.conf_hi, .fns = ~standardize_inv_vec(x=.,
-                                                               mean = mean,
-                                                               sd = standard_deviation))) %>%
-    mutate(across(.value:.conf_hi,.fns = ~log_interval_inv_vec(
-        x=.,
-        limit_lower = lower_limit,
-        limit_upper = upper_limit,
-        offset = offset
-    ))) %>%
+# * 5
+model_spec_mars = mars(mode = "regression", 
+                       num_terms = round(horizon * .33,0)) %>% 
+    set_engine("earth")
+
+workflow_fit_mars_spline = workflow() %>% add_model(model_spec_mars) %>% add_recipe(recipe_spec_base_spline) %>% fit(training(splits))
+
+# * 6
+model_spec_svm = svm_poly(mode = "regression", 
+                          cost = 25) %>% 
+    set_engine("kernlab")
+
+set.seed(253)
+
+workflow_fit_svm_spline = workflow() %>% add_model(model_spec_svm) %>% add_recipe(recipe_spec_base_spline) %>% fit(training(splits))
+
+# * NNETAR
+model_spec_nnetar = nnetar_reg() %>% set_engine("nnetar")
+
+workflow_fit_nnetar = workflow() %>% add_model(model_spec_nnetar)%>% add_recipe(recipe_spec_base) %>% fit(training(splits)%>% drop_na())
+
+# Refit, Calibrate, & Plot ------------------------------------------------
+
+calibrate_and_plot = function(..., type = "testing"){
+    if( type == "testing"){
+        new_data = testing(splits)
+    }else {
+        new_data = training(splits) %>% drop_na()
+    }
     
-    plot_modeltime_forecast()
+    calibration_tbl = modeltime_table(...) %>%
+        modeltime_calibrate(new_data)
+    
+    chosen = calibration_tbl %>% modeltime_accuracy() %>% filter(mae <= min(mae)) 
+    chosen_2 = calibration_tbl %>% modeltime_accuracy() %>% filter(mae > min(mae)) %>% filter(mae <= min(mae)) 
+    the_chosen_models = rbind(chosen,chosen_2) %>% as.data.frame()
+    
+    print(the_chosen_models %>% mutate(smape = round(smape/2,2) ) %>% drop_na())
+    
+    
+    calibration_tbl %>% filter(.model_desc == the_chosen_models$.model_desc[1] | .model_desc == the_chosen_models$.model_desc[2]) %>% 
+        modeltime_forecast(new_data= forecast_tbl,actual_data = data_prepared_tbl)%>% 
+        #Inversion
+         mutate(across(.value:.conf_hi, .fns = ~standardize_inv_vec(x=.,
+                                                                    mean = std_mean,
+                                                                    sd = standard_deviation))) %>%
+         mutate(across(.value:.conf_hi,.fns = ~log_interval_inv_vec(
+             x=.,
+             limit_lower = lower_limit,
+             limit_upper = upper_limit,
+             offset = offset
+         ))) %>%
+        
+        plot_modeltime_forecast(.conf_interval_show = F, .title = the_graph_title)#, .interactive = F)
+    
+}
 
-refit_tbl %>% modeltime_accuracy()
+
+suppressWarnings(calibrate_and_plot(workflow_fit_lm_spline,
+                                    workflow_fit_arima_lag,
+                                    workflow_fit_prophet_lag,
+                                    workflow_fit_glmnet_spline,
+                                    workflow_fit_mars_spline,
+                                    workflow_fit_svm_spline,
+                                    workflow_fit_nnetar
+))
+
+combined_model_times = modeltime_table(
+    workflow_fit_lm_spline,
+    workflow_fit_arima_lag,
+    workflow_fit_prophet_lag,
+    workflow_fit_glmnet_spline,
+    workflow_fit_mars_spline,
+    workflow_fit_svm_spline,
+    workflow_fit_nnetar
+)
+
+
+calibration_tbl = suppressWarnings(combined_model_times %>% modeltime_calibrate(testing(splits)))
+
+chosen = calibration_tbl %>% modeltime_accuracy() %>% filter(mae <= min(mae)) 
+chosen_2 = calibration_tbl %>% modeltime_accuracy() %>% filter(mae > min(mae)) %>% filter(mae <= min(mae)) 
+the_chosen_models = rbind(chosen,chosen_2) %>% as.data.frame()
+
+calibration_tbl %>% filter(.model_desc == the_chosen_models$.model_desc[1] | .model_desc == the_chosen_models$.model_desc[2])
+
+
+# Sequential Cross Validation ---------------------------------------------
+
+wflw_fit_nnetar = calibration_tbl %>% pluck_modeltime_model(7)
+
+resamples_tscv_lag = time_series_cv(data       = training(splits) %>% drop_na(),
+                                    cumulative  = T,
+                                    assess      = "1 month",
+                                    skip        = "15 days",
+                                    slice_limit = 3)
+
+# resamples_tscv_lag %>% tk_time_series_cv_plan() %>% plot_time_series_cv_plan(.date_var = Date,value)
+
+recipe_spec_cv_lag = wflw_fit_nnetar %>% pull_workflow_preprocessor() %>% step_naomit(starts_with("value_lag"))
+
+model_spec_nnetar_tune = nnetar_reg(
+    non_seasonal_ar = tune(),
+    seasonal_ar = tune(),
+    hidden_units = tune(),
+    num_networks = 5,
+    penalty = tune(),
+    epochs = tune()
+) %>% set_engine("nnetar")
+
+#parameters(model_spec_nnetar_tune)
+
+set.seed(253)
+grid_spec_nnetar_1 = grid_latin_hypercube(parameters(model_spec_nnetar_tune),size = 3)
+
+wflw_nnetar_tune = wflw_fit_nnetar %>% update_recipe(recipe_spec_cv_lag) %>% update_model(model_spec_nnetar_tune)
+
+set.seed(253)
+
+#parallel::detectCores()
+
+tune_results_nnetar_1 = wflw_nnetar_tune %>% tune_grid(resamples = resamples_tscv_lag,
+                                                       grid      = grid_spec_nnetar_1,
+                                                       metrics   = default_forecast_accuracy_metric_set(),
+                                                       control   = control_grid(verbose = T, save_pred = T))
+
+first_round = tune_results_nnetar_1 %>% show_best(metric = "rmse") %>% slice(1:3)
+
+set.seed(253)
+grid_spec_nnetar_2 = grid_latin_hypercube(
+    non_seasonal_ar(range = c(first_round$non_seasonal_ar[1],first_round$non_seasonal_ar[3])),
+    seasonal_ar(range = c(first_round$seasonal_ar[1],first_round$seasonal_ar[3])),
+    hidden_units(range = c(first_round$hidden_units[1],first_round$hidden_units[3])),
+    penalty(range = c(log10(first_round$penalty[1]),log10(first_round$penalty[3]))),
+    epochs(range = c(first_round$epochs[1],first_round$epochs[3])),
+    size = 3)
+
+
+set.seed(253)
+tune_results_nnetar_2 = wflw_nnetar_tune %>% tune_grid(resamples = resamples_tscv_lag,
+                                                       grid      = grid_spec_nnetar_2,
+                                                       metrics   = default_forecast_accuracy_metric_set(),
+                                                       control   = control_grid(verbose = T, save_pred = T))
+
+
+
+set.seed(253)
+wflw_nnetar_tune_fitted = wflw_nnetar_tune            %>% 
+    finalize_workflow(tune_results_nnetar_2        %>% 
+                          show_best(metric = "rmse") %>% 
+                          slice(1))                       %>%
+    fit(training(splits))
+
+suppressWarnings(calibrate_and_plot(wflw_nnetar_tune_fitted,
+                                    workflow_fit_nnetar
+))
+
+
+#Calibrate ARIMA
+
+wflw_fit_arima = calibration_tbl %>% pluck_modeltime_model(2)
+
+resamples_tscv_lag = time_series_cv(data       = training(splits) %>% drop_na(),
+                                    cumulative  = T,
+                                    assess      = "1 month",
+                                    skip        = "15 days",
+                                    slice_limit = 10)
+
+# resamples_tscv_lag %>% tk_time_series_cv_plan() %>% plot_time_series_cv_plan(.date_var = Date,value)
+
+recipe_spec_cv_lag = wflw_fit_arima %>% pull_workflow_preprocessor() %>% step_naomit(starts_with("value_lag"))
+
+model_spec_arima_tune = arima_boost(
+    mode = "regression",
+    seasonal_period = tune(),
+    non_seasonal_ar = tune(),
+    non_seasonal_differences = tune(),
+    non_seasonal_ma = tune(),
+    seasonal_ar = tune(),
+    seasonal_differences = tune(),
+    seasonal_ma = tune()
+) %>% set_engine("auto_arima_xgboost")
+
+#parameters(model_spec_nnetar_tune)
+
+set.seed(253)
+grid_spec_arima_1 = grid_latin_hypercube(parameters(model_spec_arima_tune),size = 10)
+
+wflw_arima_tune = wflw_fit_arima %>% update_recipe(recipe_spec_cv_lag) %>% update_model(model_spec_arima_tune)
+
+set.seed(253)
+tune_results_arima_1 = wflw_arima_tune %>% tune_grid(resamples = resamples_tscv_lag,
+                                                     grid      = grid_spec_arima_1,
+                                                     metrics   = default_forecast_accuracy_metric_set(),
+                                                     control   = control_grid(verbose = T, save_pred = T))
+
+first_round = tune_results_arima_1 %>% show_best(metric = "rmse") %>% slice(1:3)
+
+set.seed(253)
+grid_spec_arima_2 = grid_latin_hypercube(
+    seasonal_period("daily"),
+    non_seasonal_ar(range = c(first_round$non_seasonal_ar[1],first_round$non_seasonal_ar[3])),
+    non_seasonal_differences(range = c(first_round$non_seasonal_differences[1],first_round$non_seasonal_differences[3])),
+    non_seasonal_ma(range = c(first_round$non_seasonal_ma[1],first_round$non_seasonal_ma[3])),
+    seasonal_ar(range = c(first_round$seasonal_ar[1],first_round$seasonal_ar[3])),
+    seasonal_differences(range = c(first_round$seasonal_differences[1],first_round$seasonal_differences[3])),
+    seasonal_ma(range = c(first_round$seasonal_ma[1],first_round$seasonal_ma[3])),
+    size = 10) %>% rename("seasonal_period" = "period")
+
+
+set.seed(253)
+tune_results_arima_2 = wflw_arima_tune %>% tune_grid(resamples = resamples_tscv_lag,
+                                                     grid      = grid_spec_arima_2,
+                                                     metrics   = default_forecast_accuracy_metric_set(),
+                                                     control   = control_grid(verbose = T, save_pred = T))
+
+
+
+set.seed(253)
+wflw_arima_tune_fitted = wflw_arima_tune            %>% 
+    finalize_workflow(tune_results_arima_2        %>% 
+                          show_best(metric = "rmse") %>% 
+                          slice(1))                       %>%
+    fit(training(splits))
+
+suppressWarnings(calibrate_and_plot(wflw_arima_tune_fitted,
+                                    workflow_fit_arima_lag
+))
+
+# Non Sequential K-Folds --------------------------------------------------
+
+# prophet -----------------------------------------------------------------
+
+wflw_fit_prophet = calibration_tbl %>% pluck_modeltime_model(3)
+
+set.seed(253)
+resamples_kfold = vfold_cv(training(splits) %>% drop_na(),v = 10)
+
+#resamples_kfold %>% tk_time_series_cv_plan() %>% plot_time_series_cv_plan(Date, value, .facet_ncol = 2)
+
+wflw_fit_prophet %>% pull_workflow_spec()
+
+model_spec_prophet_boost = prophet_boost(
+    changepoint_num     = tune(),
+    changepoint_range   = tune(),
+    seasonality_yearly  = F,
+    seasonality_weekly  = F,
+    seasonality_daily   = F,
+    mtry                = tune(),
+    trees               = 150,
+    min_n               = tune(),
+    tree_depth          = tune(),
+    learn_rate          = tune(),
+    loss_reduction      = tune()
+)%>% 
+    set_engine("prophet_xgboost") 
+
+set.seed(253)
+grid_spec_prophet_1 = grid_latin_hypercube(
+    parameters(model_spec_prophet_boost) %>%
+        update(mtry = mtry(range = c(1,65))),
+    size = 10
+)
+
+set.seed(253)
+tune_results_prophet_1 = wflw_fit_prophet %>% 
+    update_model(model_spec_prophet_boost) %>% 
+    tune_grid(resamples = resamples_kfold,
+              grid      = grid_spec_prophet_1,
+              metrics   = default_forecast_accuracy_metric_set(),
+              control   = control_grid(verbose = F, save_pred = T))
+
+tune_results_prophet_1 %>% show_best(metric = "rmse", n = Inf)
+
+first_round = tune_results_prophet_1 %>% show_best(metric = "rmse") %>% slice(1:3)
+
+wflw_fit_prophet %>% pull_workflow_spec()
+
+set.seed(253)
+grid_spec_prophet_2 = grid_latin_hypercube(
+    changepoint_num(range = c(first_round$changepoint_num[1],first_round$changepoint_num[3])),
+    changepoint_range(range = c(first_round$changepoint_range[1],first_round$changepoint_range[3])),
+    mtry(range = c(first_round$mtry[1],first_round$mtry[3])),
+    min_n(range = c(first_round$min_n[1],first_round$min_n[3])),
+    tree_depth(range = c(first_round$tree_depth[1],first_round$tree_depth[3])),
+    learn_rate(range = c(first_round$learn_rate[1],first_round$learn_rate[3])),
+    loss_reduction(range = c(first_round$loss_reduction[1],first_round$loss_reduction[3])),
+    size = 10) 
+
+
+set.seed(253)
+tune_results_prophet_2 = wflw_fit_prophet  %>% 
+    update_model(model_spec_prophet_boost)%>% tune_grid(resamples = resamples_kfold,
+                                                        grid      = grid_spec_prophet_2,
+                                                        metrics   = default_forecast_accuracy_metric_set(),
+                                                        control   = control_grid(verbose = T, save_pred = T))
+
+set.seed(253)
+wflw_prophet_tune_fitted = wflw_fit_prophet  %>% 
+    update_model(model_spec_prophet_boost)            %>% 
+    finalize_workflow(tune_results_prophet_2        %>% 
+                          show_best(metric = "rmse") %>% 
+                          slice(1))                       %>%
+    fit(training(splits))
+
+# MARS --------------------------------------------------------------------
+wflw_fit_mars = calibration_tbl %>% pluck_modeltime_model(5)
+
+set.seed(253)
+resamples_kfold = vfold_cv(training(splits) %>% drop_na(),v = 10)
+
+resamples_kfold %>% tk_time_series_cv_plan() %>% plot_time_series_cv_plan(Date, value, .facet_ncol = 2)
+
+wflw_fit_mars %>% pull_workflow_spec()
+
+model_spec_mars = mars(
+    mode     = "regression",
+    num_terms = tune(),
+    prod_degree = tune())%>% 
+    set_engine("earth") 
+
+set.seed(253)
+grid_spec_mars_1 = grid_latin_hypercube(
+    parameters(model_spec_mars),
+    size = 10
+)
+
+
+set.seed(253)
+registerDoFuture()
+
+plan(strategy = cluster,
+     workers  = parallel::makeCluster(6))
+
+tune_results_mars_1 = wflw_fit_mars %>% 
+    update_model(model_spec_mars) %>% 
+    tune_grid(resamples = resamples_kfold,
+              grid      = grid_spec_mars_1,
+              metrics   = default_forecast_accuracy_metric_set(),
+              control   = control_grid(verbose = F, save_pred = T))
+
+tune_results_mars_1 %>% show_best(metric = "rmse", n = Inf)
+
+first_round = tune_results_prophet_1 %>% show_best(metric = "rmse") %>% slice(1:3)
+
+set.seed(253)
+grid_spec_mars_2 = grid_latin_hypercube(
+    num_terms(range = c(first_round$num_terms[1],first_round$num_terms[3])),
+    prod_degree(range = c(first_round$prod_degree[1],first_round$prod_degree[3])),
+    size = 10) 
+
+registerDoFuture()
+plan(strategy = cluster,
+     workers  = parallel::makeCluster(6))
+
+set.seed(253)
+tune_results_mars_2 = wflw_fit_mars  %>% 
+    update_model(model_spec_mars)%>% tune_grid(resamples = resamples_kfold,
+                                               grid      = grid_spec_mars_2,
+                                               metrics   = default_forecast_accuracy_metric_set(),
+                                               control   = control_grid(verbose = T, save_pred = T))
+
+set.seed(253)
+wflw_mars_tune_fitted = wflw_fit_mars  %>% 
+    update_model(model_spec_mars)            %>% 
+    finalize_workflow(tune_results_mars_2        %>% 
+                          show_best(metric = "rmse") %>% 
+                          slice(1))                       %>%
+    fit(training(splits))
+
+
+
+calibrate_and_plot(wflw_nnetar_tune_fitted,
+                   wflw_arima_tune_fitted,
+                   wflw_prophet_tune_fitted,
+                   wflw_mars_tune_fitted)

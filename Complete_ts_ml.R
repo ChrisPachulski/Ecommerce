@@ -44,8 +44,8 @@ raw_query <- dbSendQuery(con, statement = statement) %>% dbFetch(., n = -1) %>% 
 
 
 unique_card = raw_query%>% filter(grepl("M$",Key)) %>% mutate(Arb = ifelse(is.na(Arb), (MKT*(-1)),Arb ),
-                                                                             BL = ifelse(is.na(BL), (0), BL ),
-                                                                             BL_QTY = ifelse(is.na(BL_QTY), (0), BL_QTY ))
+                                                              BL = ifelse(is.na(BL), (0), BL ),
+                                                              BL_QTY = ifelse(is.na(BL_QTY), (0), BL_QTY ))
 cards_listed = NULL
 for(i in unique(unique_card$Card)){
     card_list = paste('"',i,'",',sep="")
@@ -55,50 +55,189 @@ for(i in unique(unique_card$Card)){
 cards_listed = gsub(",$","",cards_listed)
 
 statement <- paste(
-    "SELECT DISTINCT rdate,scryfall_id,types,manaCost, card, count(*) added_printings FROM `gaeas-cradle.roster.mtgjson`a WHERE card in (",cards_listed,") GROUP BY 1,2,3,4,5  ORDER BY rdate desc ",
+    "SELECT DISTINCT rdate,types,manaCost, card, count(*) added_printings FROM `gaeas-cradle.roster.mtgjson`a WHERE card in (",cards_listed,") GROUP BY 1,2,3,4  ORDER BY rdate desc ",
     sep = ""
 )
 printings_xreg = dbSendQuery(con, statement = statement) %>% dbFetch(., n = -1) %>% distinct() %>% mutate(rdate = ymd(rdate))
 
-printings_xreg = printings_xreg %>% group_by(scryfall_id,card,types,manaCost) %>% summarize(printings = sum(added_printings)) %>% arrange(card)
+
+# mtgjson xregs -----------------------------------------------------------
+
+content <- fromJSON("https://mtgjson.com/api/v5/AllPrintings.json")
+library(tidyjson)
+
+sets_of_interest <- content$data %>% names() %>% as.list()
+sets_of_interest <- sets_of_interest[sets_of_interest != "AMH1"]
+sets_of_interest <- sets_of_interest[sets_of_interest != "F18"]
+sets_of_interest <- sets_of_interest[sets_of_interest != "L12"]
+sets_of_interest <- sets_of_interest[sets_of_interest != "L13"]
+sets_of_interest <- sets_of_interest[sets_of_interest != "L14"]
+sets_of_interest <- sets_of_interest[sets_of_interest != "L15"]
+sets_of_interest <- sets_of_interest[sets_of_interest != "L16"]
+sets_of_interest <- sets_of_interest[sets_of_interest != "L17"]
+sets_of_interest <- sets_of_interest[sets_of_interest != "PLNY"]
+sets_of_interest <- sets_of_interest[sets_of_interest != "PR2"]
+sets_of_interest <- sets_of_interest[sets_of_interest != "AZNR"]
+sets_of_interest <- sets_of_interest[sets_of_interest != "MZNR"]
+sets_of_interest <- sets_of_interest[sets_of_interest != "SZNR"]
+sets_of_interest <- sets_of_interest[sets_of_interest != "TBTH"]
+sets_of_interest <- sets_of_interest[sets_of_interest != "TDAG"]
+sets_of_interest <- sets_of_interest[sets_of_interest != "TFTH"]
 
 
-Character_Check <- character(0)
-combined_attributes = NULL
-for(i in 1:nrow(printings_xreg)){
-    scryfall_link <- paste("https://api.scryfall.com/cards/",printings_xreg$scryfall_id[i],sep="")
-    scryfall <- GET(scryfall_link)
-    card <- (content(scryfall,"parsed")$name)
-    if(is.null(card) == T){card = NA}
-    commander <- gsub("legal","E",(content(scryfall,"parsed")$legalities$commander))
-    if(identical(commander,Character_Check)==T){commander <- "?"}
-    if(is.null(commander) == T){commander = NA}
-    color_1 <- tryCatch(expr = {content(scryfall,"parsed")$colors[[1]]}, error = function(e){color_1 = "NA"})
-    color_2 <- tryCatch(expr = {content(scryfall,"parsed")$colors[[2]]}, error = function(e){color_2 = "NA"})
-    color_3 <- tryCatch(expr = {content(scryfall,"parsed")$colors[[3]]}, error = function(e){color_3 = "NA"})
-    color_4 <- tryCatch(expr = {content(scryfall,"parsed")$colors[[4]]}, error = function(e){color_4 = "NA"})
-    color_5 <- tryCatch(expr = {content(scryfall,"parsed")$colors[[5]]}, error = function(e){color_5 = "NA"})
-    color_6 <- tryCatch(expr = {content(scryfall,"parsed")$colors[[6]]}, error = function(e){color_6 = "NA"})
-    if(is.null(color_1) == T){color_1 = "NA"}
-    if(is.null(color_2) == T){color_2 = "NA"}
-    if(is.null(color_3) == T){color_3 = "NA"}
-    if(is.null(color_4) == T){color_4 = "NA"}
-    if(is.null(color_5) == T){color_5 = "NA"}
-    if(is.null(color_6) == T){color_6 = "NA"}
-    if(color_2 != "NA"){final_color <- "Multi"}else if(color_1 == "G"){final_color <- "Green"}else if(color_1 == "R"){final_color <- "Red"}else if(color_1 == "W"){final_color <- "White"}else if(color_1 == "B"){final_color <- "Black"}else if(color_1 == "U"){final_color <- "Blue"}else{final_color <- "Brown"}
-    if(rarity == "mythic"){rarity <- "M"}else if(rarity == "rare"){rarity <- "R"}else if(rarity == "uncommon"){rarity <- "U"}else if(rarity == "common"){rarity <- "C"}else{rarity <- "S"}
-    attributes <- cbind(final_color,commander)
-    combined_attributes <- rbind(combined_attributes,attributes)
-    Sys.sleep(.12)
+sets_of_interest %>% unlist()
+#temp$data$cards$leadershipSkills$commander
+
+Card_Dictionary <- NULL
+for(set in sets_of_interest){
+    tryCatch({
+        temp <- fromJSON(paste("https://mtgjson.com/api/v5/",set,".json",sep=""))
+        if(temp$data$isOnlineOnly == F){
+            rdate <- temp$data$releaseDate
+            if(is.null(rdate)==T){rdate = temp$data$releaseDate}
+            uuid <- temp$data$cards$uuid
+            if(is.null(uuid)==T){uuid = NA}
+            scryfall_id <- temp$data$cards$identifiers$scryfallId
+            if(is.null(scryfall_id)==T){scryfall_id = NA}
+            mcmid <- temp$data$cards$identifiers$mcmId
+            if(is.null(mcmid)==T){mcmid = NA}
+            tcg_ID <- temp$data$cards$identifiers$tcgplayerProductId
+            if(is.null(tcg_ID)==T){tcg_ID = NA}
+            card <- temp$data$cards$name
+            if(is.null(card)==T){card = NA}
+            set <- temp$data$name
+            if(is.null(set)==T){set = NA}
+            abbr <- temp$data$code
+            if(is.null(abbr)==T){abbr = NA}
+            rarity <- temp$data$cards$rarity
+            if(is.null(rarity)==T){rarity = NA}
+            number <- temp$data$cards$number
+            if(is.null(number)==T){number = NA}
+            types <- temp$data$cards$types
+            if(is.null(types)==T){types = NA}
+            manaCost <- temp$data$cards$convertedManaCost
+            if(is.null(manaCost)==T){manaCost = NA}
+            colors <- unlist(temp$data$cards$colors)
+            if(is.null(colors)==T){colors = NA}
+            keywords <- temp$data$cards$keywords
+            if(is.null(keywords)==T){keywords = NA}
+            hasFoil <- temp$data$cards$hasFoil
+            if(is.null(hasFoil)==T){hasFoil = NA}
+            hasNonFoil <- temp$data$cards$hasNonFoil
+            if(is.null(hasNonFoil)==T){hasNonFoil = NA}
+            isAlternative <- temp$data$cards$isAlternative
+            if(is.null(isAlternative)==T){isAlternative = NA}
+            # variations <- temp$cards$variations
+            # if(is.null(variations)==T){variations = NA}
+            standard <- temp$cards$legalities$standard
+            if(is.null(standard)==T){standard = NA}
+            pioneer <- temp$data$cards$legalities$pioneer
+            if(is.null(pioneer)==T){pioneer = NA}
+            modern <- temp$data$cards$legalities$modern
+            if(is.null(modern)==T){modern = NA}
+            legacy <- temp$data$cards$legalities$legacy
+            if(is.null(legacy)==T){legacy = NA}
+            commander <- temp$data$cards$legalities$commander
+            if(is.null(commander)==T){commander = NA}
+            pauper <- temp$data$cards$legalities$pauper
+            if(is.null(pauper)==T){pauper = NA}
+            ckid <- temp$data$cards$identifiers$cardKingdomId
+            if(is.null(ckid)==T){ckid = NA}
+            ckid_f <- temp$data$cards$identifiers$cardKingdomFoilId
+            if(is.null(ckid_f)==T){ckid_f = NA}
+            edhrecRank <- temp$data$cards$edhrecRank
+            if(is.null(edhrecRank)==T){edhrecRank = NA}
+            Printings <- str_count(temp$data$cards$printings,'"')/2
+            if(is.null(Printings)==T){Printings = NA}
+            isPromo = temp$data$cards$isPromo
+            if(is.null(isPromo)==T){isPromo = NA}
+            isReserved = temp$data$cards$isReserved
+            if(is.null(isReserved)==T){isReserved = NA}
+            commander <- temp$data$cards$leadershipSkills$commander
+            if(is.null(commander)==T){commander = NA}
+            info <- cbind(rdate,uuid,scryfall_id,mcmid,tcg_ID,card,set,abbr,rarity,number,types,manaCost,colors,hasFoil,hasNonFoil,isAlternative,standard,pioneer,modern,legacy,commander,pauper,ckid,ckid_f,edhrecRank,Printings,isPromo,isReserved,commander)
+            Card_Dictionary <- rbind(Card_Dictionary,info)
+        }
+    },error=function(e){next})
 }
-printings_xreg <- cbind(printings_xreg, combined_attributes %>% as.data.frame())
+
+Card_Dictionary_backup <- Card_Dictionary
+Card_Dictionary <- Card_Dictionary_backup
+Card_Dictionary <- as.data.frame(Card_Dictionary)
+Card_Dictionary$rdate <- unlist(Card_Dictionary[1])
+Card_Dictionary$uuid <- unlist(Card_Dictionary[2])
+Card_Dictionary$scryfall_id <- unlist(Card_Dictionary[3])
+Card_Dictionary$mcmid <- unlist(Card_Dictionary[4])
+Card_Dictionary$tcg_ID<- unlist(Card_Dictionary[5])
+Card_Dictionary$card <- unlist(Card_Dictionary[6])
+Card_Dictionary$set <- unlist(Card_Dictionary[7])
+Card_Dictionary$abbr <- unlist(Card_Dictionary[8])
+Card_Dictionary$rarity <- unlist(Card_Dictionary[9])
+Card_Dictionary$number <- unlist(Card_Dictionary[10])
+Card_Dictionary$types <- unlist(ifelse(str_count(Card_Dictionary$types,'"') >=3,"Multiple",Card_Dictionary$types))
+
+Card_Dictionary$manaCost <- unlist(Card_Dictionary[12])
+Card_Dictionary$colors <- unlist(Card_Dictionary$colors)
+#Card_Dictionary$colors <- unlist(ifelse(identical(unlist(Card_Dictionary$colors),character(0))==T,NA,unlist(Card_Dictionary$colors)))
+Card_Dictionary$hasFoil <- unlist(Card_Dictionary[14])
+Card_Dictionary$hasNonFoil <- unlist(Card_Dictionary[15])
+Card_Dictionary$isAlternative <- unlist(Card_Dictionary[16])
+#Card_Dictionary$variations <- unlist(Card_Dictionary[15])
+Card_Dictionary$standard <- as.character(unlist(Card_Dictionary[17]))
+Card_Dictionary$pioneer <- unlist(Card_Dictionary[18])
+Card_Dictionary$modern <- unlist(Card_Dictionary[19])
+Card_Dictionary$legacy <- unlist(Card_Dictionary[20])
+Card_Dictionary$commander <- as.character(unlist(Card_Dictionary[21]))
+Card_Dictionary$pauper <- unlist(Card_Dictionary[22])
+Card_Dictionary$ckid <- unlist(Card_Dictionary[23])
+Card_Dictionary$ckid_f <- unlist(Card_Dictionary[24])
+Card_Dictionary$edhrecRank <- unlist(Card_Dictionary[25])
+Card_Dictionary$Printings <- unlist(Card_Dictionary[26])
+Card_Dictionary$isPromo <- as.character(unlist(Card_Dictionary[27]))
+Card_Dictionary$isReserved <- as.character(unlist(Card_Dictionary[28]))
+Card_Dictionary$legendary_commander <- as.character(unlist(Card_Dictionary[29]))
+#Card_Dictionary <- Card_Dictionary[-11]
+#Card_Dictionary <- Card_Dictionary[-13]
+Card_Dictionary$rarity <- ifelse(Card_Dictionary$rarity == "mythic","M",
+                                 ifelse(Card_Dictionary$rarity == "rare","R",
+                                        ifelse(Card_Dictionary$rarity == "uncommon","U",
+                                               ifelse(Card_Dictionary$rarity == "common","C", Card_Dictionary$rarity))))
+
+Special_Card_Dictionary <- Card_Dictionary[grepl("\\★",Card_Dictionary$number),]
+Nonfoil_Card_Dictionary <- Card_Dictionary[!grepl("\\★",Card_Dictionary$number),]
+
+Nonfoil_Only <- Nonfoil_Card_Dictionary[which(Nonfoil_Card_Dictionary$hasNonFoil == T & Nonfoil_Card_Dictionary$hasFoil == F),]
+Nonfoil_Only$hasFoil <- ""
+Nonfoil_Only$hasNonFoil <- ""
+Foil_Only <- Nonfoil_Card_Dictionary[which(Nonfoil_Card_Dictionary$hasNonFoil == F & Nonfoil_Card_Dictionary$hasFoil == T),]
+Foil_Only$hasFoil <- " FOIL"
+Foil_Only$hasNonFoil <- ""
+Nonfoil_Halfs <- Nonfoil_Card_Dictionary[which(Nonfoil_Card_Dictionary$hasNonFoil == T & Nonfoil_Card_Dictionary$hasFoil == T),]
+Nonfoil_Halfs$hasFoil <- ""
+Nonfoil_Halfs$hasNonFoil <- ""
+Foil_Halfs <- Nonfoil_Card_Dictionary[which(Nonfoil_Card_Dictionary$hasNonFoil == T & Nonfoil_Card_Dictionary$hasFoil == T),]
+Foil_Halfs$hasFoil <- " FOIL"
+Foil_Halfs$hasNonFoil <- ""
+
+Entire_Dictionary <- rbind(Nonfoil_Only, Foil_Only)
+Entire_Dictionary <- rbind(Entire_Dictionary,Nonfoil_Halfs)
+Entire_Dictionary <- rbind(Entire_Dictionary,Foil_Halfs)
+Entire_Dictionary$Key <- paste(Entire_Dictionary$abbr,"-",Entire_Dictionary$number,sep="")
+Entire_Dictionary$Working_Key <- paste(Entire_Dictionary$card,Entire_Dictionary$set,Entire_Dictionary$rarity,Entire_Dictionary$hasFoil,sep="")
+Entire_Dictionary = Entire_Dictionary %>% as.data.frame() %>% replace(is.na(.),0)
+# Implementing mtgjson xregs ----------------------------------------------
+Entire_Dictionary %>% select(Working_Key,rarity,colors,hasFoil,hasNonFoil,standard,pioneer,modern,legacy,pauper,edhrecRank,Printings,isPromo,isReserved,legendary_commander) %>% filter(grepl("M$",Working_Key))
+
+printings_xreg <- cbind(printings_xreg, combined_attributes %>% as.data.frame()) %>% select(-scryfall_id)
+
+printings_xreg = printings_xreg %>% group_by(card,types,manaCost,final_color,commander,rarity) %>% summarize(printings = sum(added_printings)) %>% arrange(card)
 
 
 #uc %>% select(-Card) %>% select(Date,everything()) %>% group_by(Key) %>% plot_time_series(Date, BL, .facet_ncol = 4,.smooth = F,.interactive = F)
 
 uc = unique_card %>% 
     left_join(set_dates_xreg, by = c("Date"="rdate")) %>%
-    left_join(printings_xreg, by = c("Card"="card")) %>% 
+    left_join(Entire_Dictionary %>% select(Working_Key,rarity,colors,hasFoil,hasNonFoil,standard,pioneer,modern,legacy,pauper,edhrecRank,Printings,isPromo,isReserved,legendary_commander), by = c("Key"="Working_Key")) %>% 
     distinct() %>% arrange(Key,Date) %>% fill(Sellers, TCG_Rank, .direction = "downup") %>% 
     pad_by_time(Date,.by = "day",.pad_value = 0)
 
