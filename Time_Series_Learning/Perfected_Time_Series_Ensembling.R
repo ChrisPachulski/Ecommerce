@@ -1,5 +1,5 @@
 pacman::p_load(tidyverse,httr,jsonlite,ranger,timetk,lubridate,bigrquery,modeltime,modeltime.ensemble,recipes,rsample,kernlab,glmnet,kknn,earth,tidymodels,rules,doFuture,future,tune,plotly,googlesheets4,googledrive)
-
+pacman::p_load(dplyr)
 options(httr_oob_default=TRUE) 
 options(gargle_oauth_email = "pachun95@gmail.com")
 drive_auth(email = "pachun95@gmail.com",use_oob=TRUE)
@@ -28,6 +28,11 @@ tcg_sr_rr <- function(email){
     options(scipen = 20)
     con
 }
+
+registerDoFuture()
+n_cores = parallel::detectCores()
+plan(strategy = cluster,
+     workers  = parallel::makeCluster(n_cores-1) )
 
 # mtgjson update for Xregs ------------------------------------------------
 library(jsonlite)
@@ -197,7 +202,7 @@ colnames(Entire_Dictionary)
 # Database Interactions ---------------------------------------------------
 Sets <- read.csv("/home/cujo253/Essential_Referential_CSVS/Sets.csv",stringsAsFactors = TRUE)
 #View(Sets)
-ck_conversion <- read_csv("~/Essential_Referential_CSVS/mtgjson_ck_sets.csv")
+ck_conversion <- read_csv("/home/cujo253/Essential_Referential_CSVS/mtgjson_ck_sets.csv")
 
 Updated_Tracking_Keys = Entire_Dictionary %>% replace_na(list(Foil = "")) %>%mutate(card = gsub("\\s\\/\\/.*","",card),
                                                                                     Key = trimws(paste(card,set,rarity," ",hasFoil,sep="")),
@@ -210,18 +215,9 @@ statement <- paste("SELECT DISTINCT rdate, a.set FROM `gaeas-cradle.roster.mtgjs
 set_dates_xreg = dbSendQuery(con, statement = statement) %>% dbFetch(., n = -1) %>% distinct() %>% 
     mutate(set_release = 1, rdate = ymd(rdate)) %>% pad_by_time(.date_var =rdate) %>%
     select(-set) %>% replace(is.na(.),0)
-gc()
-registerDoFuture()
-n_cores = parallel::detectCores()
-plan(
-  strategy = cluster,
-  workers = parallel::makeCluster(n_cores -1)
-)
 
-A = 1
-B = 20
-for(i in 1:20){
-shortlist_tbl = range_read(drive_get("Wolfs_Buylist_Review"),"Current_BuyList") %>% select(data.name,data.edition,data.is_foil) %>% slice(A:B) %>%
+shortlist_tbl = as.data.frame(range_read(drive_get("Wolfs_Buylist_Review"),"Current_BuyList")) %>% 
+    select(data.name,data.edition,data.is_foil) %>% dplyr::slice(1:8) %>%
     mutate(data.is_foil = as.character(data.is_foil)) %>% replace_na(list(data.is_foil = "")) %>%
     mutate(data.edition = ifelse(data.edition == "Promotional",data.variation,data.edition),
            data.edition = gsub("\\/The List","",data.edition) ) %>%
@@ -231,11 +227,7 @@ shortlist_tbl = range_read(drive_get("Wolfs_Buylist_Review"),"Current_BuyList") 
     mutate(number = Updated_Tracking_Keys$number[match(Semi, Updated_Tracking_Keys$Semi)]) %>%
     mutate(CK_Key = trimws(paste(data.name, data.edition, rarity," ",data.is_foil, sep=""))) %>% 
     mutate(param = Updated_Tracking_Keys$tcg_ID[match(CK_Key, Updated_Tracking_Keys$Key)]) %>%
-    na.omit()
-
-A = A + 20
-B = B + 20
-if(B > 2000){B=2000}
+    na.omit()                                                                         
 
 Short_list_params = NULL
 for(i in unique(shortlist_tbl$param)){
@@ -247,7 +239,7 @@ Short_list_params = gsub(",$","",Short_list_params)
 
 
 statement <- paste(
-    "SELECT a.Key,a.Card,a.Set,a.Rarity,a.MKT,a.Sellers,a.BL,a.BL_QTY,a.Arb,a.TCG_Rank,a.CK_ADJ_Rank,a.Date ",
+    "SELECT a.Key,a.Set,a.Rarity,a.BL,a.Date ",
     "FROM `gaeas-cradle.premiums.*` a ",
     'WHERE Foil_Status not like "%FOIL%" and (Rarity like "R" or Rarity like "M" or Rarity like "U") and a.Set is not NULL and param is not NULL ',
     'AND param in (',Short_list_params,') ',
@@ -261,180 +253,149 @@ statement <- paste(
 raw_query <- dbSendQuery(con, statement = statement) %>% dbFetch(., n = -1) %>% distinct()
 
 unique_card = raw_query%>% #filter(Key == ukey) %>% 
-    mutate(Arb = ifelse(is.na(Arb), (MKT*(-1)),Arb ),
-           BL = ifelse(is.na(BL), (0), BL ),
-           BL_QTY = ifelse(is.na(BL_QTY), (0), BL_QTY ))
+    mutate(BL = ifelse(is.na(BL), (0), BL ))
+
 nrow((unique_card))
 min(unique_card$Date)
 
 key_count = unique_card  %>% group_by(Key) %>% tally() %>% as.data.frame()
-unique_card = unique_card %>% left_join(key_count, by = c("Key"="Key")) %>% filter(n > 10) %>% select(-n)
+unique_card = unique_card %>% left_join(key_count, by = c("Key"="Key")) %>% filter(n > 90) %>% select(-n)
+individual_keys = unique_card %>% select(Key) %>% distinct()
+#for(i in 1:nrow(individual_keys)){
+#    individual_card = unique_card %>% filter(Key == as.character(individual_keys[i,]))
+# Training & Future Data Preparation ---------------------------------------------------------------------------------
+full_tbl = unique_card                                   %>%
+    #select(Date,Key,BL)                                  %>% 
+    group_by(Key)                                        %>% 
+    pad_by_time(Date, .by = "day", .pad_value = NA)        %>%
+    fill(BL, .direction = "down")                        %>%
+    ungroup()                                            %>%
+    mutate(BL = log1p(BL))                               %>%
+    group_by(Key)                                        %>%
+    future_frame(Date, .length_out = 28, .bind_data = T) %>%
+    ungroup()                                            %>%
+    left_join(set_dates_xreg, by = c("Date"="rdate"))    %>%
+    distinct()                                           %>% 
+    ungroup()                                            %>%
+    mutate(gap = Date - lag(Date))                       %>% 
+    filter(gap != 0)                                     %>% 
+    select(-gap)                                         %>%
+    mutate(Key = as.factor(Key))                         %>% 
+    group_by(Key)                                        %>% 
+    group_split()                                        %>% 
+    map(.f = function(df){
+        df %>% 
+            arrange(Date)                                 %>% 
+            
+            tk_augment_fourier(Date,.period = c(14,21,28,45)) %>%
+            
+            tk_augment_lags(BL, .lags = c(14,28,56))            %>%
+            
+            tk_augment_slidify(BL_lag14               ,
+                               .f       = ~mean(.x,na.rm=T),
+                               .period  = c(14,28,14*3,56)  ,
+                               .partial = T          ,
+                               .align   = "center")         %>%
+            
+            tk_augment_slidify(BL_lag28              ,
+                               .f       = ~mean(.x,na.rm=T),
+                               .period  = c(14,28,14*3,56)  ,
+                               .partial = T          ,
+                               .align   = "center")         %>%
+            tk_augment_slidify(BL_lag56              ,
+                               .f       = ~mean(.x,na.rm=T),
+                               .period  = c(14,28,14*3,56)  ,
+                               .partial = T          ,
+                               .align   = "center")          
+    })                                                  %>% 
+    bind_rows()                                         %>% 
+    rowid_to_column(var = "rowid")                      #%>%
+    # group_by(Key)
 
-full_data_tbl = unique_card %>% 
-    left_join(set_dates_xreg, by = c("Date"="rdate")) %>%
-    left_join(Entire_Dictionary %>% select(Working_Key,rarity,hasFoil,hasNonFoil,standard,pioneer,modern,legacy,pauper,edhrecRank,Printings,isPromo,isReserved,legendary_commander), by = c("Key"="Working_Key")) %>% 
-    distinct() %>% select(-MKT,-Sellers,-Rarity, - BL_QTY, -Arb, -TCG_Rank, -CK_ADJ_Rank) %>%
-    arrange(Key,Date) %>% group_by(Key) %>% pad_by_time(Date,.by = "day",.pad_value = NA)  %>%
-    fill(Card,Set,BL,set_release, rarity,hasFoil,hasNonFoil,standard,pioneer,modern,legacy,pauper,edhrecRank,Printings,isPromo,isReserved,legendary_commander, .direction = "downup") %>% 
-    ungroup() %>% #mutate(TCG_Rank = log1p(TCG_Rank), CK_ADJ_Rank = log1p(CK_ADJ_Rank)) %>%
-    group_by(Key) %>% future_frame(Date, .length_out = 45, .bind_data = T) %>%ungroup() %>%
-    fill( Card, Set, set_release, rarity,hasFoil,hasNonFoil,standard,pioneer,modern,legacy,pauper,edhrecRank,Printings,isPromo,isReserved,legendary_commander, .direction = "down") %>%
-    arrange(Key, Date) %>% group_by(Key) %>% mutate(gap = Date - lag(Date)) %>% filter(gap != 0) %>% select(-gap) %>%
-    mutate(Key = as.factor(Key)) %>% group_by(Key)  %>% group_split() %>% map(.f = function(df){
-        df %>% arrange(Date) %>% tk_augment_fourier(Date,.period = c(7,28)) %>%
-            tk_augment_lags(BL, .lags = c(5,14,28)) %>%
-            tk_augment_slidify(BL_lag5,
-                               .f = ~mean(.x,na.rm=T),
-                               .period = c(5,14,28),
-                               .partial = T,
-                               .align = "center") %>%
-            tk_augment_slidify(BL_lag14,
-                               .f = ~mean(.x,na.rm=T),
-                               .period = c(5,14,28),
-                               .partial = T,
-                               .align = "center") %>%
-            tk_augment_slidify(BL_lag28,
-                               .f = ~mean(.x,na.rm=T),
-                               .period = c(5,14,28),
-                               .partial = T,
-                               .align = "center")
-    }) %>% bind_rows() %>% rowid_to_column(var = "rowid") %>%
-    replace_na(list(pauper_Banned       = 0)) %>%
-    replace_na(list(pauper_Legal        = 0)) %>%
-    replace_na(list(standard            = 0)) %>%
-    replace_na(list(pauper              = 0)) %>%
-    replace_na(list(isPromo             = 0)) %>%
-    replace_na(list(isReserved          = 0))%>%
-    replace_na(list(pioneer             = 0))%>%
-    replace_na(list(legendary_commander = 0)) %>%
-    select(-Card,-Set,-set_release,-rarity,-hasFoil,-hasNonFoil,-standard,-pioneer,-modern,-legacy,-pauper,-edhrecRank,-Printings,-isPromo,-isReserved,-legendary_commander)
+data_prepared_tbl = full_tbl %>% 
+    filter(!is.na(BL))       %>% 
+    drop_na()
 
-
-# Splitting the Data ------------------------------------------------------
-
-data_prepared_tbl = full_data_tbl %>% filter(!is.na(BL)) %>% drop_na()
-
-future_data_tbl = full_data_tbl %>% filter(is.na(BL)) %>% 
+future_tbl =  full_tbl                                                        %>%
+    filter(is.na(BL))                                                           %>%
     mutate(across(.cols = contains("_lag"), .fns = ~ ifelse(is.nan(.x),NA,.x))) %>%
-    mutate(across(.cols = contains("_lag"), .fns = ~ replace_na(.x,0) ))
+    mutate(across(.cols = contains("_lag"), .fns = ~ replace_na(.x,0) ))        #%>%
+    #fill(contains("_lag"), .direction = "up")
 
-splits = data_prepared_tbl %>% time_series_split(Date,assess = 45, cumulative = T)
+#skimr::skim(data_prepared_tbl)
+#skimr::skim(full_tbl                                                        %>%
+#                filter(is.na(BL))%>%
+#                mutate(across(.cols = contains("_lag"), .fns = ~ ifelse(is.nan(.x),NA,.x))) %>%
+#                mutate(across(.cols = contains("_lag"), .fns = ~ replace_na(.x,0) )) )
+#View(future_tbl)
+#future_tbl %>% View()
 
-#splits %>% tk_time_series_cv_plan() %>% plot_time_series_cv_plan(Date,BL)
+splits = data_prepared_tbl %>% time_series_split(Date, assess = 28, cumulative = T)
+
+train_cleaned = training(splits)              %>%
+    group_by(Key)                              %>%
+    mutate(BL = ts_clean_vec(BL, period = 7)) %>%
+    ungroup()
 
 
+recipe_spec = recipe(BL ~., data = train_cleaned)                      %>%
+    update_role(rowid, new_role = "indicator")                           %>%
+    step_timeseries_signature(Date)                                      %>%
+    step_rm(matches("(.xts$)|(.iso$)|(hour)|(minute)|(second)|(am.pm)|(Date_year)")) %>%
+    step_normalize(Date_index.num)                             %>%
+    step_other(Key) %>%
+    step_dummy(all_nominal(), one_hot = T)
 
-# pre-processing ----------------------------------------------------------
+#recipe_spec %>% prep() %>% juice() %>% glimpse()
 
-train_cleaned = training(splits) %>% group_by(BL) %>% mutate(BL = ts_clean_vec(BL,period = 7))
-
-#summary( train_cleaned %>% mutate(across(.cols = rarity:pauper, .fns = as.factor)))
-
-recipe_spec = recipe(BL ~ ., data = train_cleaned) %>%
-    update_role(rowid, new_role = "indicator") %>%
-    step_timeseries_signature(Date) %>%
-    #step_rm(matches("(.xts$)|(.iso$)|(hour)|(Key)|(Card)|(Set)|(minute)|(rarity)|(pioneer)|(modern)|(pauper)|(legacy)|(second)|(am.pm)|(Date_year)|(hasFoil)|(hasNonFoil)|(standard)|(isPromo)|(isReserved)|(legendary_commander)|(rarity)|(hasFoil)|(hasNonFoil)|(modern)|(pauper)|(legacy)|(Set)|(standard)|(isPromo)|(isReserved)|(edhrecRank)|(Printings)")) %>% #|(hasFoil)|(hasNonFoil)|(legendary_commander)|(pauper)|(standard)|(modern)|(legacy)|(pioneer)|(Card)|(Key)|(isPromo)|(isReserved)")) %>%
-    step_normalize(Date_index.num) %>%
-    step_dummy(all_nominal(), one_hot = T) #%>% 
-    #mutate_if(is.integer,as.double) #%>%
-    #replace_na(list(legendary_commander_FALSE = 0)) %>%
-    #replace_na(list(legendary_commander_TRUE = 0))
-
-#memory.limit(size = 1500000)
-
-recipe_spec %>% prep() %>% juice() %>% glimpse()
-gc()
+# Models ------------------------------------------------------------------
+# train_cleaned %>% view()
 # wflw 1 - Prophet --------------------------------------------------------
-wflw_fit_prophet = workflow() %>%
-    add_model(
-        spec = prophet_reg() %>% set_engine("prophet")
-    ) %>%
-    add_recipe(recipe_spec) %>%
+wflw_fit_prophet = workflow()         %>%
+    add_model(spec = prophet_reg() %>% 
+                  set_engine("prophet"))    %>%
+    add_recipe(recipe_spec)             %>%
     fit(train_cleaned)
-gc()
 # wflw 2 - XGBoost --------------------------------------------------------
-wflw_fit_xgboost = workflow() %>%
-    add_model(
-        spec = boost_tree(mode = "regression") %>% set_engine("xgboost")
-    ) %>%
-    add_recipe(recipe_spec %>% update_role(Date, new_role = "indicator")) %>%
+wflw_fit_xgboost = workflow()                                                 %>%
+    add_model(spec = boost_tree(mode = "regression") %>% set_engine("xgboost")) %>%
+    add_recipe(recipe_spec %>% update_role(Date, new_role = "indicator"))       %>%
     fit(train_cleaned)
-gc()
 # wflw 3 - Prophet Boost --------------------------------------------------
-wflw_fit_prophet_boost = workflow() %>%
-    add_model(
-        spec = prophet_boost(
-            seasonality_daily  = F,
-            seasonality_weekly = F,
-            seasonality_yearly = F
-        ) %>% set_engine("prophet_xgboost")
-    ) %>%
-    add_recipe(recipe_spec) %>%
+wflw_fit_prophet_boost = workflow()                                           %>%
+    add_model(spec = prophet_boost(seasonality_daily  = F,
+                                   seasonality_weekly = F,
+                                   seasonality_yearly = F) %>% 
+                  set_engine("prophet_xgboost"))                                  %>%
+    add_recipe(recipe_spec)                                                     %>%
+    fit(train_cleaned)
+# wflw 4 - Random Forest --------------------------------------------------
+wflw_fit_rf = workflow()                                                      %>%
+    add_model(spec = rand_forest(mode = "regression") %>% set_engine("ranger")) %>%
+    add_recipe(recipe_spec %>% update_role(Date, new_role = "indicator"))       %>%
+    fit(train_cleaned)
+# wflw 5 - MARS (Invaders!) -----------------------------------------------
+wflw_fit_mars = workflow()                                                    %>%
+    add_model(spec = mars(mode = "regression") %>% set_engine("earth"))         %>%
+    add_recipe(recipe_spec %>% update_role(Date, new_role = "indicator"))       %>%
     fit(train_cleaned)
 gc()
-# wflw 4 - Arima ---------------------------------------------------
-wflw_fit_arima = workflow() %>%
- add_model(
-     spec = arima_boost(mode = "regression") %>% set_engine("auto_arima_xgboost")
- ) %>%
- add_recipe(recipe_spec) %>%
- fit(train_cleaned)
-gc()
-# wflw 5 - Random Forest --------------------------------------------------
-wflw_fit_rf = workflow() %>%
-    add_model(
-        spec = rand_forest(mode = "regression") %>% set_engine("ranger")
-    ) %>%
-    add_recipe(recipe_spec %>% update_role(Date, new_role = "indicator")) %>%
-    fit(train_cleaned)
-gc()
-# wflw 6 - Neural Net -----------------------------------------------------
-wflw_fit_nnet = workflow() %>%
-    add_model(
-        spec = mlp(mode = "regression") %>% set_engine("nnet")
-    ) %>%
-    add_recipe(recipe_spec %>% update_role(Date, new_role = "indicator")) %>%
-    fit(train_cleaned)
-gc()
-# wflw 7 - MARS (Invaders!) -----------------------------------------------
-wflw_fit_mars = workflow() %>%
-    add_model(
-        spec = mars(mode = "regression") %>% set_engine("earth")
-    ) %>%
-    add_recipe(recipe_spec %>% update_role(Date, new_role = "indicator")) %>%
-    fit(train_cleaned)
-gc()
-# wflw 8 - GLM -----------------------------------------------
-wflw_fit_glm = workflow() %>%
-    add_model(
-        spec = linear_reg(penalty = .75, mixture = .15) %>% set_engine("glmnet")
-    ) %>%
-    add_recipe(recipe_spec %>% update_role(Date, new_role = "indicator")) %>%
-    fit(train_cleaned)
-gc()
-# Accuracy for wflws ------------------------------------------------------
 
 all_models_tbl = modeltime_table(wflw_fit_prophet,
                                  wflw_fit_xgboost,
                                  wflw_fit_prophet_boost,
-                                 wflw_fit_arima,
                                  wflw_fit_rf,
-                                 wflw_fit_nnet,
-                                 wflw_fit_mars,
-                                 wflw_fit_glm
-                                 )
+                                 wflw_fit_mars
+)
 
 
 
 all_models_tbl %>% modeltime_accuracy(testing(splits)) %>% arrange(mae)
 
-
-#### Hyper Parameter Tuning --------------------------------------------------
+# Hyper Parameter Tuning --------------------------------------------------
 set.seed(253)
 resampled_kfolds = train_cleaned %>% vfold_cv(v = 3)                                                         
-
-
-#### XGBOOST hyperparams -----------------------------------------------------
+# XGBOOST hyperparams -----------------------------------------------------
 model_spec_xgboost_tune = boost_tree(
     mode           = "regression",
     mtry           = tune(),
@@ -450,7 +411,7 @@ wflw_spec_xgboost_tune = workflow()%>%
     add_model(model_spec_xgboost_tune) %>%
     add_recipe(recipe_spec %>% update_role(Date, new_role = "indicator")) 
 
-recipe_spec %>% update_role(Date, new_role = "indicator") %>% prep() %>% juice() %>% glimpse()
+#recipe_spec %>% update_role(Date, new_role = "indicator") %>% prep() %>% juice() %>% glimpse()
 #Skip the grid with tune_grid
 #registerDoFuture()
 #n_cores = parallel::detectCores()
@@ -478,7 +439,7 @@ wflw_fit_xgboost_tune = wflw_spec_xgboost_tune %>%
     finalize_workflow(select_best(tune_results_xgboost, "rmse")) %>%
     fit(train_cleaned)
 
-#### Random Forest -----------------------------------------------------------
+# Random Forest -----------------------------------------------------------
 
 model_spec_rf_tune = rand_forest(
     mode           = "regression",
@@ -507,62 +468,67 @@ wflw_fit_rf_tune = wflw_spec_rf_tune %>%
     fit(train_cleaned)
 
 
-#### Earth Tuning ------------------------------------------------------------
+# Earth Tuning ------------------------------------------------------------
 
-# model_spec_mars_tune = mars(
-#     mode           = "regression",
-#     num_terms      = tune(),
-#     prod_degree    = tune()) %>%
-#     set_engine("earth")
-# 
-# wflw_spec_mars_tune = workflow()%>%
-#     add_model(model_spec_mars_tune) %>%
-#     add_recipe(recipe_spec %>% update_role(Date, new_role = "indicator"))
-# #Skip the grid with tune_grid
-# set.seed(253)
-# tune_results_mars = wflw_spec_mars_tune %>% 
-#     tune_grid(
-#         resamples  = resampled_kfolds,
-#         param_info = parameters(wflw_spec_mars_tune),
-#         grid       = 3,
-#         control = control_grid(verbose = F, allow_par = T)
-#     )
-# 
-# tune_results_mars %>% show_best("rmse", n = Inf)
-# 
-# wflw_fit_mars_tune = wflw_spec_mars_tune %>% 
-#     finalize_workflow(select_best(tune_results_mars, "rmse")) %>%
-#     fit(train_cleaned)
+model_spec_mars_tune = mars(
+ mode           = "regression",
+ num_terms      = tune(),
+ prod_degree    = tune()) %>%
+ set_engine("earth")
 
+wflw_spec_mars_tune = workflow()%>%
+ add_model(model_spec_mars_tune) %>%
+ add_recipe(recipe_spec %>% update_role(Date, new_role = "indicator"))
+#Skip the grid with tune_grid
+set.seed(253)
+tune_results_mars = wflw_spec_mars_tune %>% 
+ tune_grid(
+     resamples  = resampled_kfolds,
+     param_info = parameters(wflw_spec_mars_tune),
+     grid       = 3,
+     control = control_grid(verbose = F, allow_par = T)
+ )
+ 
+tune_results_mars %>% show_best("rmse", n = Inf)
+ 
+wflw_fit_mars_tune = wflw_spec_mars_tune %>% 
+ finalize_workflow(select_best(tune_results_mars, "rmse")) %>%
+ fit(train_cleaned)
 
-#### Evaluate Panel Forecasts ------------------------------------------------
+# Evaluate Panel Forecasts ------------------------------------------------
 all_models_and_tuned_tbl = modeltime_table(
     wflw_fit_xgboost_tune,
-    wflw_fit_rf_tune
+    wflw_fit_rf_tune,
+    wflw_fit_mars_tune
 ) %>% 
     update_model_description(1, "XGBOOST - Tuned") %>%
     update_model_description(2, "RANGER - Tuned") %>%
+    update_model_description(3, "EARTH - Tuned") %>%
     combine_modeltime_tables(all_models_tbl)
+
+calibration_tbl = all_models_and_tuned_tbl %>% modeltime_calibrate(testing(splits))
 
 calibration_tbl = all_models_and_tuned_tbl %>% modeltime_calibrate(testing(splits))
 
 calibration_tbl %>% modeltime_accuracy() %>% arrange(mae)
 
 calibration_tbl %>% 
- modeltime_forecast(new_data = testing(splits), actual_data = data_prepared_tbl, keep_data = T) %>%
- group_by(Key) %>% plot_modeltime_forecast(.facet_ncol = 4 )
-
+    modeltime_forecast(new_data = testing(splits), actual_data = data_prepared_tbl, keep_data = T)%>%
+    mutate(
+        across(.cols = c(.value, BL), .fns = expm1)
+    ) %>% group_by(Key) %>% 
+    plot_modeltime_forecast(.facet_ncol = 4 )
 
 # Resampling --------------------------------------------------------------
-resamples_tscv = train_cleaned %>% ungroup() %>%
+resamples_tscv = train_cleaned %>% #ungroup() %>%
     time_series_cv(
-        assess      = 45,
-        skip        = 45,
+        assess      = 28,
+        skip        = 14,
         cumulative  = T,
-        slice_limit = 3
+        slice_limit = 5
     )
 
-resamples_tscv %>% tk_time_series_cv_plan() %>% plot_time_series_cv_plan(Date, Key)
+#resamples_tscv %>% tk_time_series_cv_plan() %>% plot_time_series_cv_plan(Date, Key)
 
 
 model_tuned_resample_tbl = all_models_and_tuned_tbl %>%
@@ -576,22 +542,27 @@ model_tuned_resample_tbl %>% modeltime_resample_accuracy() %>% arrange(mae)
 
 # Ensemble Average --------------------------------------------------------
 
-models_to_keep_ensemble = model_tuned_resample_tbl %>% modeltime_resample_accuracy() %>% arrange(mae) %>% select(.model_id) %>% slice(1:5)
+models_to_keep_ensemble = model_tuned_resample_tbl %>% modeltime_resample_accuracy() %>% arrange(mae) %>% select(.model_id) %>% head(n=3)
 
 ensemble_fit = all_models_and_tuned_tbl %>%
     filter(.model_id %in% models_to_keep_ensemble$.model_id) %>%
-    ensemble_average(type = "median")
+    ensemble_average()#type = "median")
 
 
 model_ensemble_tbl = modeltime_table(ensemble_fit)
 
 model_ensemble_tbl %>% modeltime_accuracy(testing(splits))
 
-forecast_ensemble_tbl = model_ensemble_tbl %>% modeltime_forecast(new_data    = testing(splits),
+forecast_ensemble_tbl = model_ensemble_tbl %>% modeltime_forecast(new_data    = testing(splits) ,
                                                                   actual_data = data_prepared_tbl,
-                                                                  keep_data   = T) 
+                                                                  keep_data   = T) %>%
+    mutate(
+        across(.cols = c(.value, BL), .fns = expm1)
+    ) #%>% group_by(Key) %>% arrange(Key,Date) %>% View()
 
 forecast_ensemble_tbl %>% group_by(Key) %>% plot_modeltime_forecast(.facet_ncol = 4)
+
+#forecast_ensemble_tbl %>% group_by(Key) %>% plot_modeltime_forecast(.facet_ncol = 4)
 
 metrics  = forecast_ensemble_tbl %>% 
     filter(.key == "prediction") %>%
@@ -605,58 +576,51 @@ metrics  = forecast_ensemble_tbl %>%
 
 metrics
 #forecast_ensemble_tbl
-
+#refit ----------------------------------------------------------------
 data_prepared_tbl_cleaned = data_prepared_tbl%>% group_by(Key) %>% mutate(BL = ts_clean_vec(BL,period = 7)) %>% ungroup()
 
 model_ensemble_refit_tbl = model_ensemble_tbl %>% 
     modeltime_refit(data_prepared_tbl_cleaned)
 
-
-model_ensemble_tbl %>% modeltime_forecast(new_data          = future_data_tbl,
-                                         actual_data        = data_prepared_tbl,
-                                         keep_data          = T) %>% 
-    group_by(Key) %>% plot_modeltime_forecast(.facet_ncol = 4)
+recombined_tbl = NULL
 
 model_ensemble_refit_tbl %>% 
-  modeltime_forecast(new_data = future_data_tbl,
-                     actual_data =  data_prepared_tbl,
-                     keep_data = T) %>% 
-  group_by(Key) %>% plot_modeltime_forecast(.facet_ncol = 4)
-
-recombined_tbl %>% 
-    filter(.key == "prediction") %>%
-    select(Key, .value, BL) %>%
-    group_by(Key) %>% View()
-    summarize_accuracy_metrics(
-        truth = BL,
-        estimate = .value,
-        metric_set = metric_set(mae, rmse, rsq)
-    )
+    modeltime_forecast(new_data = future_tbl,
+                       actual_data =  data_prepared_tbl,
+                       keep_data = T) %>% 
+    mutate(
+        .value = expm1(.value),
+        BL     = expm1(BL)
+    ) %>%
+    group_by(Key) %>% plot_modeltime_forecast(.facet_ncol = 4)
 
 recombined_tbl = model_ensemble_refit_tbl %>% 
-  modeltime_forecast(new_data = future_data_tbl,
-                     actual_data =  data_prepared_tbl,
-                     keep_data = T) 
+    modeltime_forecast(new_data = future_tbl,
+                       actual_data =  data_prepared_tbl,
+                       keep_data = T) %>%
+    mutate(.value = expm1(.value), BL = expm1(BL))     
+
+recombined_tbl %>%
+ filter(Date == Sys.Date() | Date == max(Date)) %>%view()
 
 hopeful_results = recombined_tbl %>%
-  filter(Date == Sys.Date() | Date == max(Date)) %>%
-  select(Key, Card, Set, rarity, .value, Date) %>%
-  mutate(lagged = round(lag(.value, 1),1) ,
-         .value = round(.value,1)) %>%
-  mutate(diff = round(.value - lagged,1)) %>%
-  filter(Date == (Sys.Date()+45)) %>% 
-  filter(diff > 0) %>% 
-  left_join(metrics %>% select(Key, mae), by = c("Key"="Key")) %>%
-  mutate(diff = diff - round(mae,1)) %>%
-  mutate(Current_BL = lagged,
-         Forecast_BL = .value,
-         Forecasted_Gains = diff,
-         Forecasted_Growth = round(diff/lagged,1)) %>%
-  select(-.value,-diff,-mae,-lagged) %>%
-  filter(Forecasted_Growth <= 10 & Forecasted_Growth >= .1) %>%
-  left_join(Sets %>% select(Set_Excl,Excl_Excl), by = c("Set"="Set_Excl")) %>%
-  filter(Excl_Excl != "Exclude") %>%
-  select(-Excl_Excl)
+    filter(Date == Sys.Date() | Date == max(Date)) %>%
+    select(Key, .value, Date) %>%
+    mutate(lagged = round(lag(.value, 1),1) ,
+           .value = round(.value,1)) %>%
+    mutate(diff = round(.value - lagged,1)) %>%
+    filter(Date == (Sys.Date()+28)) %>% 
+    filter(diff > 0) %>% 
+    left_join(metrics %>% select(Key, mae), by = c("Key"="Key")) %>%
+    mutate(diff = diff - round(mae,1)) %>%
+    mutate(Current_BL = lagged,
+           Forecast_BL = .value,
+           Forecasted_Gains = diff,
+           Forecasted_Growth = round(diff/lagged,1)) %>%
+    select(-.value,-diff,-mae,-lagged) %>%
+    filter(Forecasted_Growth <= 10 & Forecasted_Growth >= .1) %>%
+    left_join(Sets %>% select(Set_Excl,Excl_Excl), by = c("Set"="Set_Excl")) %>%
+    filter(Excl_Excl != "Exclude") %>%
+    select(-Excl_Excl)
+#}
 
-Final_Forecast_Results = rbind(Final_Forecast_Results,hopeful_results)
-}
