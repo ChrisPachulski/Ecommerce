@@ -30,8 +30,8 @@ tcg_sr_rr <- function(email){
 }
 
 # mtgjson update for Xregs ------------------------------------------------
-library(jsonlite)
-content <- fromJSON("https://mtgjson.com/api/v5/AllPrintings.json")
+url = "https://mtgjson.com/api/v5/AllPrintings.json"
+content <- fromJSON(url)
 library(tidyjson)
 
 sets_of_interest <- content$data %>% names() %>% as.list()
@@ -233,8 +233,8 @@ shortlist_tbl = range_read(drive_get("Wolfs_Buylist_Review"),"Current_BuyList") 
     mutate(param = Updated_Tracking_Keys$tcg_ID[match(CK_Key, Updated_Tracking_Keys$Key)]) %>%
     na.omit()
 
-A = A + 250
-B = B + 250
+A = A + 100
+B = B + 100
 if(B > 2000){B=2000}
 
 Short_list_params = NULL
@@ -340,7 +340,7 @@ recipe_spec = recipe(BL ~ ., data = train_cleaned) %>%
 
 #memory.limit(size = 1500000)
 
-recipe_spec %>% prep() %>% juice() %>% glimpse()
+#recipe_spec %>% prep() %>% juice() %>% glimpse()
 gc()
 # wflw 1 - Prophet --------------------------------------------------------
 wflw_fit_prophet = workflow() %>%
