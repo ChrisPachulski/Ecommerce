@@ -1,0 +1,272 @@
+mtgjson,CK_BL_Scrape_Sets,MTG_Goldfish_Sets,GF_Abbr,GF_Abbr_Foil,TCG_Key,,sets,sets_Foil,,Set_Excl ,Excl_Excl
+Revised Edition,3rd Edition,Revised Edition,3ED,,Revised Edition,,10E,7E_F,,Throne of Eldraine,Standard
+Fifth Edition,5th Edition,Fifth Edition,5ED,,5th Edition,,1E,8ED_F,,Modern Horizons,Modern
+Seventh Edition,7th Edition,Seventh Edition,7,7E_F,7th Edition,,2ED,9ED_F,,War of the Spark,Pioneer
+Eighth Edition,8th Edition,Eighth Edition,8ED,8ED_F,8th Edition,,3ED,10E_F,,Core Set 2020,Pioneer
+Ninth Edition,9th Edition,Ninth Edition,9ED,9ED_F,9th Edition,,4ED,M10_F,,Amonkhet,Pioneer
+Tenth Edition,10th Edition,Tenth Edition,10,10E_F,10th Edition,,5DN,M11_F,,Ravnica Allegiance,Pioneer
+Magic 2010,2010 Core Set,Magic 2010,M10,M10_F,Magic 2010 (M10),,5ED,M12_F,,Magic 2015,Pioneer
+Magic 2011,2011 Core Set,Magic 2011,M11,M11_F,Magic 2011 (M11),,6ED,M13_F,,Dominaria,Pioneer
+Magic 2012,2012 Core Set,Magic 2012,M12,M12_F,Magic 2012 (M12),,7E,M15_F,,Magic 2014,Pioneer
+Magic 2013,2013 Core Set,Magic 2013,M13,M13_F,Magic 2013 (M13),,8ED,AER_F,,Commander 2019,EDH
+Magic 2015,2015 Core Set,Magic 2015 Core Set,M15,M15_F,Magic 2015 (M15),,9ED,AKH_F,,Guilds of Ravnica,Pioneer
+Fourth Edition,4th Edition,Fourth Edition,4ED,,Fourth Edition,,A25,AP_F,,Khans of Tarkir,Pioneer
+Fifth Edition,5th Edition,Fifth Edition,5ED,,Fifth Edition,,AER,AVR_F,,Aether Revolt,Pioneer
+Classic Sixth Edition,6th Edition,Classic Sixth Edition,6ED,,Classic Sixth Edition,,AKH,BFZ_F,,Theros,Pioneer
+Seventh Edition,7th Edition,Seventh Edition,7,7_F,Seventh Edition,,ALA,BBD_F,,Ixalan,Pioneer
+Eighth Edition,8th Edition,Eighth Edition,8ED,8ED_F,Eighth Edition,,ALL,BOK_F,,Kaladesh,Pioneer
+Ninth Edition,9th Edition,Ninth Edition,9ED,9ED_F,Ninth Edition,,AP,BNG_F,,Fate Reforged,Pioneer
+Aether Revolt,Aether Revolt,Aether Revolt,AER,AER_F,Aether Revolt,,ARB,CHK_F,,Core Set 2019,Pioneer
+Amonkhet,Amonkhet,Amonkhet,AKH,AKH_F,Amonkhet,,ARC,CSP_F,,Unstable,Unclear
+Antiquities,Antiquities,Antiquities,ATQ,,Antiquities,,ARN,CON_F,,Return to Ravnica,Pioneer
+Apocalypse,Apocalypse,Apocalypse,AP,AP_F,Apocalypse,,ATQ,CN2_F,,Rivals of Ixalan,Pioneer
+Archenemy,Archenemy,Archenemy,ARC,,Archenemy,,AVR,M19_F,,Magic 2013,Modern
+Avacyn Restored,Avacyn Restored,Avacyn Restored,AVR,AVR_F,Avacyn Restored,,BBD,M20_F,,Hour of Devastation,Pioneer
+Battle for Zendikar,Battle for Zendikar,Battle for Zendikar,BFZ,BFZ_F,Battle for Zendikar,,BFZ,DIS_F,,Duel Decks: Elves vs. Inventors,Unclear
+Battlebond,Battlebond,Battlebond,BBD,BBD_F,Battlebond,,BNG,DOM_F,,Shadows over Innistrad,Pioneer
+Limited Edition Beta,Beta,Limited Edition Beta,LEB,,Beta Edition,,BOK,DGM_F,,Eldritch Moon,Pioneer
+Betrayers of Kamigawa,Betrayers of Kamigawa,Betrayers of Kamigawa,BOK,BOK_F,Betrayers of Kamigawa,,BOOSTER,DTK_F,,Magic 2011,Modern
+Born of the Gods,Born of the Gods,Born of the Gods,BNG,BNG_F,Born of the Gods,,BRB,EVE_F,,Zendikar,Modern
+Champions of Kamigawa,Champions of Kamigawa,Champions of Kamigawa,CHK,CHK_F,Champions of Kamigawa,,BTD,EX_F,,Future Sight,Modern
+Coldsnap,Coldsnap,Coldsnap,CSP,CSP_F,Coldsnap,,C13,FRF_F,,Born of the Gods,Pioneer
+Collectors’ Edition,Collectors Ed,,,,Collector's Edition,,C14,5DN_F,,Ultimate Masters,Modern
+Intl. Collectors’ Edition,Collectors Ed Intl,,,,International Edition,,C15,FUT_F,,Iconic Masters,EDH
+Commander 2013,Commander 2013,Commander 2013 Edition,C13,,Commander 2013,,C16,GTC_F,,Explorers of Ixalan,Pioneer
+Commander 2014,Commander 2014,Commander 2014,C14,,Commander 2014,,C17,GPT_F,,Magic Origins,Pioneer
+Commander 2015,Commander 2015,Commander 2015,C15,,Commander 2015,,C18,GRN_F,,Prophecy,Exclude
+Commander 2016,Commander 2016,Commander 2016,C16,,Commander 2016,,C19,IMA_F,,Dragons of Tarkir,Pioneer
+Commander 2017,Commander 2017,Commander 2017,C17,,Commander 2017,,CHK,ISD_F,,Dragon's Maze,Pioneer
+Commander 2018,Commander 2018,Commander 2018,C18,,Commander 2018,,CHR,XLN_F,,Gatecrash,Pioneer
+Commander 2019,Commander 2019,Commander 2018,C19,,Commander 2019,,CM1,JUD_F,,Innistrad,Modern
+Commander 2020,Commander 2020,Commander 2020,C20,,Commander 2020,,CM2,KLD_F,,Battle for Zendikar,Pioneer
+Commander's Arsenal,Commander's Arsenal,Commander's Arsenal,CM1,,Commander's Arsenal,,CMA,KTK_F,,Ice Age,Exclude
+Conflux,Conflux,Conflux,CON,CON_F,Conflux,,CMD,LGN_F,,Modern Masters 2015,Modern
+Conspiracy: Take the Crown,Conspiracy - Take the Crown,Conspiracy: Take the Crown,CN2,CN2_F,Conspiracy: Take the Crown,,CN2,LRW_F,,Chronicles,Exclude
+Core Set 2019,Core Set 2019,Core Set 2019,M19,M19_F,Core Set 2019,,CNS,ORI_F,,Fifth Dawn,Modern
+Core Set 2020,Core Set 2020,Core Set 2020,M20,M20_F,Core Set 2020,,CON,A25_F,,Oath of the Gatewatch,Pioneer
+Dissension,Dissension,Dissension,DIS,DIS_F,Dissension,,CSP,MM_F,,Champions of Kamigawa,Modern
+Dominaria,Dominaria,Dominaria,DOM,DOM_F,Dominaria,,DD2,MI_F,,Journey into Nyx,Pioneer
+Double Masters,Double Masters,Double Masters,2XM,2XM_F,Double Masters,,DDC,MRD_F,,Commander 2018,EDH
+Dragon's Maze,Dragon's Maze,Dragon's Maze,DGM,DGM_F,Dragon's Maze,,2XM,2XM_F,,Worldwake,Modern
+Dragons of Tarkir,Dragons of Tarkir,Dragons of Tarkir,DTK,DTK_F,Dragons of Tarkir,,DDD,MBS_F,,Avacyn Restored,Modern
+Duel Decks: Anthology,Duel Decks: Anthology,Duel Decks Anthology,DD3,,Duel Decks: Anthology,,DDE,MH1_F,,New Phyrexia,Modern
+Duel Decks: Knights vs. Dragons,Duel Decks: Knights Vs. Dragons,Duel Decks: Knights vs. Dragons,DDG,,Duel Decks: Knights vs. Dragons,,DDF,MMA_F,,Commander 2014,EDH
+Duel Decks: Nissa vs. Ob Nixilis,Duel Decks: Nissa Vs. Ob Nixilis,Duel Decks: Nissa vs. Ob Nixilis,DDR,,Duel Decks: Nissa vs. Ob Nixilis,,DDG,MM2_F,,Dark Ascension,Modern
+Eventide,Eventide,Eventide,EVE,EVE_F,Eventide,,DDH,MM3_F,,Tempest,Exclude
+Exodus,Exodus,Exodus,EX,EX_F,Exodus,,DDI,MOR_F,,Dissension,Modern
+Fate Reforged,Fate Reforged,Fate Reforged,FRF,FRF_F,Fate Reforged,,DDJ,NE_F,,Magic 2012,Modern
+Fifth Dawn,Fifth Dawn,Fifth Dawn,5DN,5DN_F,Fifth Dawn,,DDK,ONS_F,,Battlebond,EDH
+Future Sight,Future Sight,Future Sight,FUT,FUT_F,Future Sight,,DDL,PS_F,,Guildpact,Modern
+Gatecrash,Gatecrash,Gatecrash,GTC,GTC_F,Gatecrash,,DDM,RAV_F,,Commander 2017,EDH
+Guildpact,Guildpact,Guildpact,GPT,GPT_F,Guildpact,,DDN,RNA_F,,Time Spiral,Exclude
+Guilds of Ravnica,Guilds of Ravnica,Guilds of Ravnica,GRN,GRN_F,Guilds of Ravnica,,DDO,ROE_F,,Visions,Exclude
+Ice Age,Ice Age,Ice Age,ICE,ICE_F,Ice Age,,DDP,RIX_F,,Ravnica: City of Guilds,Modern
+Iconic Masters,Iconic Masters,Iconic Masters,IMA,IMA_F,Iconic Masters,,DDQ,SOM_F,,Masters 25,Modern
+Innistrad,Innistrad,Innistrad,ISD,ISD_F,Innistrad,,DDR,SCG_F,,Darksteel,Modern
+Ixalan,Ixalan,Ixalan,XLN,XLN_F,Ixalan,,DDS,SHM_F,,Shadowmoor,Modern
+Judgment,Judgment,Judgment,JUD,JUD_F,Judgment,,DDT,SOI_F,,Signature Spellbook: Gideon,EDH
+Kaladesh,Kaladesh,Kaladesh,KLD,KLD_F,Kaladesh,,DDU,ALA_F,,Scars of Mirrodin,Modern
+Khans of Tarkir,Khans of Tarkir,Khans of Tarkir,KTK,KTK_F,Khans of Tarkir,,DGM,THS_F,,Rise of the Eldrazi,Modern
+Legends,Legends,Legends,LEG,LEG_F,Legends,,DIS,ELD_F,,Coldsnap,Exclude
+Legions,Legions,Legions,LGN,LGN_F,Legions,,DKA,TSP_F,,Urza's Legacy,Exclude
+Lorwyn,Lorwyn,Lorwyn,LRW,LRW_F,Lorwyn,,DOM,TSB_F,,Odyssey,Exclude
+Magic Origins,Magic Origins,Magic Origins,ORI,ORI_F,Magic Origins,,DRB,TOR_F,,Legions,Unclear
+Masters 25,Masters 25,Masters 25,A25,A25_F,Masters 25,,DRK,UMA_F,,Urza's Saga,Exclude
+Mercadian Masques,Mercadian Masques,Mercadian Masques,MM,MM_F,Mercadian Masques,,DST,UGL_F,,Mirrodin,Modern
+Mirage,Mirage,Mirage,MI,MI_F,Mirage,,DTK,UNH_F,,Global Series Jiang Yanggu & Mu Yanling,EDH
+Mirrodin,Mirrodin,Mirrodin,MRD,MRD_F,Mirrodin,,E01,UL_F,,Magic 2010,Modern
+Mirrodin Besieged,Mirrodin Besieged,Mirrodin Besieged,MBS,MBS_F,Mirrodin Besieged,,E02,UZ_F,,Planar Chaos,Modern
+Modern Event Deck 2014,Modern Event Deck,Modern Event Deck 2014,MD1,MD1_F,Magic Modern Event Deck,,ELD,VI_F,,Mirrodin Besieged,Modern
+Modern Horizons,Modern Horizons,Modern Horizons,MH1,MH1_F,Modern Horizons,,EMA,WAR_F,,Morningtide,Modern
+Modern Masters,Modern Masters,Modern Masters,MMA,MMA_F,Modern Masters,,EMN,WL_F,,Conspiracy,EDH
+Modern Masters 2015,Modern Masters 2015,Modern Masters 2015 Edition,MM2,MM2_F,Modern Masters 2015,,EVE,WWK_F,,Invasion,Unclear
+Modern Masters 2017,Modern Masters 2017,Modern Masters 2017 Edition,MM3,MM3_F,Modern Masters 2017,,EVG,M14_F,,Modern Masters 2017,Modern
+Morningtide,Morningtide,Morningtide,MOR,MOR_F,Morningtide,,EX,ARB_F,,Conspiracy: Take the Crown,EDH
+Nemesis,Nemesis,Nemesis,NE,NE_F,Nemesis,,EXP,CNS_F,,Onslaught,Exclude
+Onslaught,Onslaught,Onslaught,ONS,ONS_F,Onslaught,,FEM,DKA_F,,Conflux,EDH
+Planechase,Planechase,Planechase,PC1,,Planechase 2012,,FRF,DST_F,,Eternal Masters,EDH
+Planechase Anthology,Planechase Anthology,Planechase Anthology,PCA,,Planechase Anthology,,FUT,EMN_F,,Saviors of Kamigawa,Modern
+Planeshift,Planeshift,Planeshift,PS,PS_F,Shards of Alara,,GK1,EMA_F,,Torment,Exclude
+Portal,Portal,Portal,POR,POR_F,Guilds of Ravnica: Guild Kits,,GK2,HOU_F,,Stronghold,Exclude
+Portal Three Kingdoms,Portal 3K,Portal Three Kingdoms,PTK,PTK_F,Portal Three Kingdoms,,GNT,IN_F,,Planeshift,EDH
+Premium Deck Series: Graveborn,Premium Deck Series: Graveborn,Premium Deck Series: Graveborn,PD3,,Premium Deck Series: Graveborn,,GPT,JOU_F,,Commander 2013,EDH
+Promo Pack,Promo Pack,Promo Pack: Throne of Eldraine,PPELD,,Promo Pack: Throne of Eldraine,,GRN,NPH_F,,Weatherlight,Exclude
+San Diego Comic-Con 2013,Promotional,Promotional,PRM,,SDCC 2013 Exclusive,,GTC,OGW_F,,Commander 2016,EDH
+Ravnica: City of Guilds,Ravnica,Ravnica: City of Guilds,RAV,RAV_F,Ravnica: City of Guilds,,H09,OD_F,,Scourge,Exclude
+Ravnica Allegiance,Ravnica Allegiance,Ravnica Allegiance,RNA,RNA_F,Ravnica Allegiance,,HML,PLC_F,,Mirage,Exclude
+Rise of the Eldrazi,Rise of the Eldrazi,Rise of the Eldrazi,ROE,ROE_F,Rise of the Eldrazi,,HOU,RTR_F,,Modern Masters,Modern
+Rivals of Ixalan,Rivals of Ixalan,Rivals of Ixalan,RIX,RIX_F,Rivals of Ixalan,,ICE,SOK_F,,Nemesis,Exclude
+Scars of Mirrodin,Scars of Mirrodin,Scars of Mirrodin,SOM,SOM_F,Scars of Mirrodin,,IMA,ST_F,,Unlimited Edition,Exclude
+Scourge,Scourge,Scourge,SCG,SCG_F,Scourge,,ISD,TE_F,,Lorwyn,Modern
+Shadowmoor,Shadowmoor,Shadowmoor,SHM,SHM_F,Shadowmoor,,JOU,UST_F,,Apocalypse,Exclude
+Shadows over Innistrad,Shadows Over Innistrad,Shadows over Innistrad,SOI,SOI_F,Shadows over Innistrad,,JUD,UD_F,,Mercadian Masques,Exclude
+Shards of Alara,Shards of Alara,Shards of Alara,ALA,ALA_F,Shards of Alara,,KLD,ZEN_F,,Exodus,Exclude
+Signature Spellbook: Gideon,Signature Spellbook: Gideon,Signature Spellbook: Gideon,SS2,SS2_F,Signature Spellbook: Gideon,,KTK,MB1_F,,Alara Reborn,Modern
+Starter 1999,Starter 1999,Starter 1999,S99,,Starter 1999,,LEA,M21_F,,Betrayers of Kamigawa,Modern
+The Dark,The Dark,The Dark,DRK,DRK_F,The Dark,,LEB,THB_F,,Urza's Destiny,Exclude
+Theros,Theros,Theros,THS,THS_F,Theros,,LEG,IKO_F,,Legends,Exclude
+Throne of Eldraine,Throne of Eldraine,Throne of Eldraine,ELD,ELD_F,Throne of Eldraine,,LGN,ZNR_F,,Modern Event Deck 2014,Unclear
+Throne of Eldraine Variants,Throne of Eldraine Variants,Throne of Eldraine Promos,PELD,PELD_F,,,LRW,,,Alliances,Exclude
+Time Spiral,Time Spiral,Time Spiral,TSP,TSP_F,Time Spiral,,M10,,,Duel Decks: Mind vs. Might,Unclear
+Time Spiral Timeshifted,Timeshifted,'Time Spiral Timeshifted',TSB,TSB_F,Timeshifted,,M11,,,Commander Anthology Volume II,EDH
+Torment,Torment,Torment,TOR,TOR_F,Torment,,M12,,,RNA Guild Kit,Pioneer
+Ultimate Masters,Ultimate Masters,Ultimate Masters,UMA,UMA_F,Ultimate Masters,,M13,,,Commander 2011,EDH
+Unglued,Unglued,Unglued,UGL,UGL_F,Unglued,,M14,,,Commander 2015,EDH
+Unhinged,Unhinged,Unhinged,UNH,UNH_F,Unhinged,,M15,,,Signature Spellbook: Jace,EDH
+Unlimited Edition,Unlimited,Unlimited Edition,2ED,,Unlimited Edition,,M19,,,Duel Decks: Zendikar vs. Eldrazi,Unclear
+Urza's Legacy,Urza's Legacy,Urza's Legacy,UL,UL_F,Urza's Legacy,,M20,,,Duel Decks: Nissa vs. Ob Nixilis,Unclear
+Urza's Saga,Urza's Saga,Urza's Saga,UZ,UZ_F,Urza's Saga,,MBS,,,Homelands,Exclude
+Visions,Visions,Visions,VI,VI_F,Visions,,MD1,,,Duel Decks: Izzet vs. Golgari,Unclear
+War of the Spark,War of the Spark,War of the Spark,WAR,WAR_F,War of the Spark,,ME2,,,Eventide,Modern
+War of the Spark JPN Planeswalkers,War of the Spark JPN Planeswalkers,War of the Spark,WAR,WAR_F,War of the Spark,,ME3,,,The Dark,Exclude
+Weatherlight,Weatherlight,Weatherlight,WL,WL_F,Weatherlight,,ME4,,,Duel Decks: Blessed vs. Cursed,Unclear
+World Championships,World Championships,,,,World Championship Decks,,MED,,,Judgment,Exclude
+Worldwake,Worldwake,Worldwake,WWK,WWK_F,Worldwake,,MED-GRN,,,Duel Decks: Jace vs. Vraska,Unclear
+Zendikar,Zendikar,Zendikar,ZEN,ZEN_F,Zendikar,,MED-RNA,,,Planechase Anthology,EDH
+Tenth Edition,10th Edition,Tenth Edition,10,10_F,10th Edition,,MED-WAR,,,Fallen Empires,Unclear
+Magic 2014,2014 Core Set,Magic 2014 Core Set,M14,M14_F,Magic 2014 (M14),,MH1,,,Tenth Edition,Modern
+Alara Reborn,Alara Reborn,Alara Reborn,ARB,ARB_F,Alara Reborn,,MI,,,Duel Decks: Sorin vs. Tibalt,Unclear
+Alliances,Alliances,Alliances,ALL,ALL_F,Alliances,,MM,,,Archenemy: Nicol Bolas,EDH
+Limited Edition Alpha,Alpha,Limited Edition Alpha,LEA,,Alpha Edition,,MM2,,,Antiquities,Exclude
+Anthologies,Anthologies,Anthologies,ATH,ATH_F,Anthologies,,MM3,,,Duel Decks: Speed vs. Cunning,Unclear
+Antiquities,Antiquities,Antiquities,ATQ,ATQ_F,Antiquities,,MMA,,,Duel Decks: Knights vs. Dragons,Unclear
+Arabian Nights,Arabian Nights,Arabian Nights,ARN,ARN_F,Arabian Nights,,MOR,,,Commander Anthology,EDH
+Archenemy,Archenemy,Archenemy,ARC,ARC_F,Archenemy,,MRD,,,Duel Decks: Venser vs. Koth,Unclear
+Archenemy: Nicol Bolas,Archenemy - Nicol Bolas,Archenemy: Nicol Bolas,E01,,Archenemy: Nicol Bolas,,MS2,,,Duel Decks: Elspeth vs. Tezzeret,Unclear
+Art Series,Art Series,,,,Art Series: Modern Horizons,,MS3,,,Game Night,Exclude
+Battle Royale Box Set,Battle Royale,Battle Royale Box Set,BRB,,Battle Royale Box Set,,NE,,,Duel Decks: Elspeth vs. Kiora,Unclear
+Beatdown Box Set,Beatdown,Beatdown Box Set,BTD,,Beatdown Box Set,,NPH,,,Unglued,Unclear
+Chronicles,Chronicles,Chronicles,CHR,CHR_F,Chronicles,,OD,,,Duel Decks: Heroes vs. Monsters,Unclear
+Coldsnap Theme Decks,Coldsnap Theme Decks,Coldsnap Theme Deck Reprints,CST,CST_F,Coldsnap Theme Deck Reprints,,OGW,,,Portal,Exclude
+Commander 2011,Commander,Magic: The Gathering-Commander,CMD,CMD_F,Commander,,ONS,,,Fallen Empires,Exclude
+Commander 2019,Commander 2019,Commander 2019,C19,,Commander 2019,,ORI,,,Legions,Exclude
+Commander Anthology,Commander Anthology,Commander Anthology,CMA,,Commander Anthology,,PC1,,,Unhinged,Unclear
+Commander Anthology Volume II,Commander Anthology Vol. II,Commander Anthology 2018,CM2,,Commander Anthology Volume II,,PC2,,,Shards of Alara,Modern
+Conspiracy,Conspiracy,Magic: The Gathering?Conspiracy,CNS,CNS_F,Conspiracy,,PCA,,,Revised Edition,Exclude
+Dark Ascension,Dark Ascension,Dark Ascension,DKA,DKA_F,Dark Ascension,,PD2,,,GRN Guild Kit,EDH
+Darksteel,Darksteel,Darksteel,DST,DST_F,Darksteel,,PD3,,,Seventh Edition,Exclude
+Deckmasters,Deckmaster,Deckmasters: Garfield vs. Finkel,DKM,,,,PELD,,,Duel Decks Anthology: Jace vs. Chandra,Unclear
+Duel Decks: Ajani vs. Nicol Bolas,Duel Decks: Ajani Vs. Nicol Bolas,Duel Decks: Ajani vs. Nicol Bolas,DDH,,Duel Decks: Ajani vs. Nicol Bolas,,PLC,,,Planechase 2012,EDH
+Duel Decks: Anthology,Duel Decks: Anthology,Commander Anthology,CMA,,Duel Decks: Anthology,,PO2,,,Archenemy,EDH
+Duel Decks: Blessed vs. Cursed,Duel Decks: Blessed Vs. Cursed,Duel Decks: Blessed vs. Cursed,DDQ,,Duel Decks: Blessed vs. Cursed,,POR,,,Classic Sixth Edition,Exclude
+Duel Decks Anthology: Divine vs. Demonic,Duel Decks: Divine Vs. Demonic,Duel Decks: Divine vs. Demonic,DDC,,Duel Decks: Divine vs. Demonic,,PR,,,Duel Decks: Merfolk vs. Goblins,Unclear
+Duel Decks: Elspeth vs. Kiora,Duel Decks: Elspeth Vs. Kiora,Duel Decks: Elspeth vs. Kiora,DDO,,Duel Decks: Elspeth vs. Kiora,,PRM,,,Duel Decks Anthology: Garruk vs. Liliana,Unclear
+Duel Decks: Elspeth vs. Tezzeret,Duel Decks: Elspeth Vs. Tezzeret,Duel Decks: Elspeth vs. Tezzeret,DDF,,Duel Decks: Elspeth vs. Tezzeret,,PRM-ARN,,,Duel Decks: Phyrexia vs. the Coalition,Unclear
+Duel Decks Anthology: Elves vs. Goblins,Duel Decks: Elves Vs. Goblins,Duel Decks: Elves vs. Goblins,EVG,,Duel Decks: Merfolk vs. Goblins,,PRM-BAB,,,Portal Second Age,Exclude
+Duel Decks: Elves vs. Inventors,Duel Decks: Elves Vs. Inventors,Duel Decks: Elves vs. Inventors,DDU,,Duel Decks: Elves vs. Inventors,,PRM-CHP,,,Fifth Edition,Exclude
+Duel Decks Anthology: Garruk vs. Liliana,Duel Decks: Garruk Vs. Liliana,Duel Decks: Garruk vs. Liliana,DDD,,Duel Decks: Garruk vs. Liliana,,PRM-FNM,,,Time Spiral Timeshifted,Exclude
+Duel Decks: Heroes vs. Monsters,Duel Decks: Heroes Vs. Monsters,Duel Decks: Heroes vs. Monsters,DDL,,Duel Decks: Heroes vs. Monsters,,PRM-GBP,,,Fourth Edition,Exclude
+Duel Decks: Izzet vs. Golgari,Duel Decks: Izzet Vs. Golgari,Duel Decks: Izzet vs. Golgari,DDJ,,Duel Decks: Izzet vs. Golgari,,PRM-GDP,,,Beatdown Box Set,Exclude
+Duel Decks Anthology: Jace vs. Chandra,Duel Decks: Jace Vs. Chandra,Duel Decks: Jace vs. Chandra,DD2,,Duel Decks: Jace vs. Chandra,,PRM-GPP,,,Eighth Edition,Exclude
+Duel Decks: Jace vs. Vraska,Duel Decks: Jace Vs. Vraska,Duel Decks: Jace vs. Vraska,DDM,,Duel Decks: Jace vs. Vraska,,PRM-GUR,,,Planechase,EDH
+Duel Decks: Merfolk vs. Goblins,Duel Decks: Merfolk Vs. Goblins,Duel Decks: Merfolk vs. Goblins,DDT,,Duel Decks: Merfolk vs. Goblins,,PRM-GWP,,,Duel Decks: Ajani vs. Nicol Bolas,Unclear
+Duel Decks: Mind vs. Might,Duel Decks: Mind Vs. Might,Duel Decks: Mind vs. Might,DDS,,Duel Decks: Mind vs. Might,,PRM-HRO,,,Duel Decks Anthology: Elves vs. Goblins,Unclear
+Duel Decks: Phyrexia vs. the Coalition,Duel Decks: Phyrexia Vs. The Coalition,Duel Decks: Phyrexia vs. the Coalition,DDE,,Duel Decks: Phyrexia Vs. The Coalition,,PRM-JSS,,,Battle Royale Box Set,Unclear
+Duel Decks: Sorin vs. Tibalt,Duel Decks: Sorin Vs. Tibalt,Duel Decks: Sorin vs. Tibalt,DDK,,Duel Decks: Sorin vs. Tibalt,,PRM-JUD,,,Duel Decks Anthology: Divine vs. Demonic,Unclear
+Duel Decks: Speed vs. Cunning,Duel Decks: Speed Vs. Cunning,Duel Decks: Speed vs. Cunning,DDN,,Duel Decks: Speed vs. Cunning,,PRM-LEP,,,Starter 1999,Exclude
+Duel Decks: Venser vs. Koth,Duel Decks: Venser Vs. Koth,Duel Decks: Venser vs. Koth,DDI,,Duel Decks: Venser vs. Koth,,PRM-LPC,,,Portal Three Kingdoms,Exclude
+Duel Decks: Zendikar vs. Eldrazi,Duel Decks: Zendikar Vs. Eldrazi,Duel Decks: Zendikar vs. Eldrazi,DDP,,Duel Decks: Zendikar vs. Eldrazi,,PRM-MED,,,Battle Royale Box Set,Exclude
+Duels of the Planeswalkers,Duels of the Planeswalkers,Duels of the Planeswalkers,DPA,,Duels of the Planeswalkers,,PRM-MPR,,,Starter 2000,Exclude
+Eldritch Moon,Eldritch Moon,Eldritch Moon,EMN,EMN_F,Eldritch Moon,,PRM-MSC,,,Arabian Nights,Exclude
+Eternal Masters,Eternal Masters,Eternal Masters,EMA,EMA_F,Eternal Masters,,PRM-OHP,,,Limited Edition Beta,Exclude
+Explorers of Ixalan,Explorers of Ixalan,Explorers of Ixalan,E02,E02_F,Explorers of Ixalan,,PRM-PRE,,,Limited Edition Alpha,Exclude
+Fallen Empires,Fallen Empires,Fallen Empires,FEM,FEM_F,Fallen Empires,,PRM-PTP,,,World Championship Decks 1997,Unclear
+From the Vault: Angels,From the Vault: Angels,From the Vault: Angels,V15,,From the Vault: Angels,,PRM-REL,,,Throne of Eldraine Variants,Standard
+From the Vault: Annihilation,From the Vault: Annihilation,From the Vault: Annihilation,V14,,From the Vault: Annihilation,,PRM-SDCC13,,,San Diego Comic-Con 2013,EDH
+From the Vault: Dragons,From the Vault: Dragons,From the Vault: Dragons,DRB,,From the Vault: Dragons,,PRM-SDCC14,,,Duel Decks: Anthology,Unclear
+From the Vault: Exiled,From the Vault: Exiled,From the Vault: Exiled,V09,,From the Vault: Exiled,,PRM-SDCC15,,,Anthologies,Exclude
+From the Vault: Legends,From the Vault: Legends,From the Vault: Legends,V11,,From the Vault: Legends,,PRM-SDCC16,,,Promo Pack,EDH
+From the Vault: Lore,From the Vault: Lore,From the Vault: Lore,V16,,From the Vault: Lore,,PRM-SDCC17,,,Collectors’ Edition,Exclude
+From the Vault: Realms,From the Vault: Realms,From the Vault: Realms,V12,,From the Vault: Realms,,PRM-SDCC18,,,Eighth Edition,Modern
+From the Vault: Relics,From the Vault: Relics,From the Vault: Relics,V10,,From the Vault: Relics,,PRM-SDCC19,,,Ninth Edition,Modern
+From the Vault: Transform,From the Vault: Transform,From the Vault: Transform,V17,,From the Vault: Transform,,PRM-SPO,,,Intl. Collectors’ Edition,Exclude
+From the Vault: Twenty,From the Vault: Twenty,From the Vault: Twenty,V13,,From the Vault: Twenty,,PRM-SSP,,,Coldsnap Theme Decks,Exclude
+Game Night,Game Night,Game Night,GNT,,Magic Game Night,,PRM-UGF,,,Vanguard Series,Exclude
+Global Series Jiang Yanggu & Mu Yanling,Global Series: Jiang Yanggu & Mu Yanling,Global Series,GS1,,Global Series Jiang Yanggu & Mu Yanling,,PRM-UMA,,,Deckmasters,Unclear
+RNA Guild Kit,Guilds of Ravnica: Guild Kits,Guilds of Ravnica Guild Kits,GK1,,Guilds of Ravnica: Guild Kits,,PRM-WMCQ,,,Duels of the Planeswalkers,Unclear
+Homelands,Homelands,Homelands,HML,HML_F,Homelands,,PRM-WPN,,,Mythic Edition,EDH
+Hour of Devastation,Hour of Devastation,Hour of Devastation,HOU,HOU_F,Hour of Devastation,,PS,,,Art Series,Unclear
+Invasion,Invasion,Invasion,IN,IN_F,Invasion,,PTG,,,War of the Spark JPN Planeswalkers,Pioneer
+Journey into Nyx,Journey into Nyx,Journey into Nyx,JOU,JOU_F,Journey Into Nyx,,PTK,,,Invasion,Exclude
+Zendikar Expeditions,Masterpiece Series: Expeditions,Zendikar Expeditions,EXP,,Masterpiece Series: Expeditions,,PZ1,,,World Championship Decks 1997,Exclude
+Kaladesh Inventions,Masterpiece Series: Inventions,Masterpiece Series: Kaladesh Inventions,MS2,,Masterpiece Series: Kaladesh Inventions,,PZ2,,,Deckmasters,Exclude
+Amonkhet Invocations,Masterpiece Series: Invocations,Masterpiece Series: Amonkhet Invocations,MS3,,Masterpiece Series: Invocations,,RAV,,,Judge Gift Cards 2000,Exclude
+Modern Event Deck 2014,Modern Event Deck,Modern Event Deck 2014,MD1,,Magic Modern Event Deck,,RIX,,,Guru,Exclude
+New Phyrexia,New Phyrexia,New Phyrexia,NPH,NPH_F,New Phyrexia,,RNA,,,Prerelease Events,Unclear
+Oath of the Gatewatch,Oath of the Gatewatch,Oath of the Gatewatch,OGW,OGW_F,Oath of the Gatewatch,,ROE,,,Arena League 1996,Exclude
+Odyssey,Odyssey,Odyssey,OD,OD_F,Odyssey,,RTR,,,Duel Decks Anthology: Elves vs. Goblins,Modern
+Planar Chaos,Planar Chaos,Planar Chaos,PLC,PLC_F,Planar Chaos,,S00,,,Judge Gift Cards 2007,Exclude
+Planechase,Planechase,Planechase,PC1,,Planechase,,S99,,,15th Anniversary Cards,Exclude
+Planechase 2012,Planechase 2012,Planechase 2012 Edition,PC2,,Planechase 2012,,SCG,,,From the Vault: Dragons,Modern
+Planeshift,Planeshift,Planeshift,PS,PS_F,Planeshift,,SLD,,,Grand Prix Promos,Unclear
+Portal,Portal,Portal,POR,POR_F,Portal,,SHM,,,Duel Decks Anthology: Jace vs. Chandra,Modern
+Portal Second Age,Portal II,Portal Second Age,PO2,PO2_F,Portal Second Age,,SOI,,,Duel Decks Anthology: Divine vs. Demonic,Modern
+Premium Deck Series: Fire and Lightning,Premium Deck Series: Fire & Lightning,Premium Deck Series: Fire and Lightning,PD2,,Premium Deck Series: Fire and Lightning,,SOK,,,From the Vault: Exiled,Modern
+Premium Deck Series: Slivers,Premium Deck Series: Slivers,Premium Deck Series: Slivers,H09,,Premium Deck Series: Slivers,,SOM,,,Duel Decks Anthology: Garruk vs. Liliana,Modern
+Prophecy,Prophecy,Prophecy,PR,,Prophecy,,SS1,,,Premium Deck Series: Slivers,Modern
+RNA Guild Kit,Ravnica Allegiance: Guild Kits,Ravnica Allegiance Guild Kits,GK2,GK2_F,Ravnica Allegiance: Guild Kits,,SS2,,,Duel Decks: Phyrexia vs. the Coalition,Modern
+Return to Ravnica,Return to Ravnica,Return to Ravnica,RTR,RTR_F,Return to Ravnica,,ST,,,From the Vault: Relics,Modern
+Saviors of Kamigawa,Saviors of Kamigawa,Saviors of Kamigawa,SOK,SOK_F,Saviors of Kamigawa,,TD0,,,Duel Decks: Elspeth vs. Tezzeret,Modern
+Secret Lair Drop,Secret Lair,Secret Lair,SLD,SLD_F,Secret Lair Drop Series,,TD2,,,Premium Deck Series: Fire and Lightning,Modern
+Signature Spellbook: Jace,Signature Spellbook: Jace,Signature Spellbook: Jace,SS1,SS1_F,Signature Spellbook: Jace,,TE,,,Duel Decks: Knights vs. Dragons,Modern
+Starter 2000,Starter 2000,Starter 2000,S00,,Starter 2000,,THS,,,Duel Decks: Ajani vs. Nicol Bolas,Modern
+Stronghold,Stronghold,Stronghold,ST,ST_F,Stronghold,,TOR,,,From the Vault: Legends,Modern
+Tempest,Tempest,Tempest,TE,TE_F,Tempest,,TPR,,,Premium Deck Series: Graveborn,Modern
+Ultimate Box Topper,Ultimate Box Topper,Ultimate Box Topper,PRM-UMA,,Ultimate Masters: Box Toppers,,TSB,,,Judge Gift Cards 2010,Unclear
+Unstable,Unstable,Unstable,UST,UST_F,Unstable,,TSP,,,Duel Decks: Venser vs. Koth,Modern
+Urza's Destiny,Urza's Destiny,Urza's Destiny,UD,UD_F,Urza's Destiny,,UD,,,Magic 2013,Pioneer
+Vanguard Series,Vanguard,Vanguard,VAN,VAN_F,Vanguard,,UGL,,,Duel Decks: Izzet vs. Golgari,Modern
+War of the Spark JPN Planeswalkers,War of the Spark JPN Planeswalkers,War of the Spark,WAR,WAR_F,,,UL,,,From the Vault: Realms,EDH
+Weatherlight,Weatherlight,Weatherlight,,,Weatherlight,,UMA,,,IDW Comics 2012,Exclude
+World Championship Decks 1997,World Championships,,,,,,UNH,,,Commander's Arsenal,EDH
+Worldwake,Worldwake,Worldwake,WWK,WWK_F,Worldwake,,UST,,,Arena League 2006,Exclude
+Theros Beyond Death,Theros Beyond Death,Theros Beyond Death,THB,THB_F,Theros Beyond Death,,UZ,,,Arena League 2005,Exclude
+Mystery Booster,Mystery Booster,Mystery Booster,MB1,MB1_F,Mystery Booster Cards,,V09,,,Arena League 2004,Exclude
+Mystery Booster,Mystery Booster,Mystery Booster,MB1,MB1_F,Mystery Booster: Convention Edition Exclusives,,V10,,,Duel Decks: Sorin vs. Tibalt,Modern
+Ikoria: Lair of Behemoths,Ikoria: Lair of Behemoths,Ikoria: Lair of Behemoths,IKO,IKO_F,Ikoria: Lair of Behemoths,,V11,,,Arena League 2003,Exclude
+Ikoria: Lair of Behemoths Variants,Ikoria: Lair of Behemoths Variants,Ikoria: Lair of Behemoths Promos,PIKO,,Ikoria: Lair of Behemoths,,V12,,,Duel Decks: Heroes vs. Monsters,Modern
+Core Set 2021,Core Set 2021,Core Set 2021,M21,M21_F,Core Set 2021,,V13,,,From the Vault: Twenty,Unclear
+Core Set 2021 Variants,Core Set 2021 Variants,Core Set 2021 Promos,PM21,,Core Set 2021,,V14,,,Judge Gift Cards 2013,Exclude
+Signature Spellbook: Chandra,Signature Spellbook: Chandra,Signature Spellbook: Chandra,SS3,SS3_F,Signature Spellbook: Chandra,,V15,,,Duel Decks: Jace vs. Vraska,Modern
+Jumpstart,Jumpstart,Jumpstart,JMP,,Jumpstart,,V16,,,Duel Decks: Speed vs. Cunning,Modern
+Double Masters Box Toppers,Double Masters Box Toppers,Double Masters Box Toppers,P2XM,,Double Masters Box Toppers,,V17,,,From the Vault: Annihilation,EDH
+Commander Legends,Commander Legends,Commander Legends,CMR,CMR_F,Commander Legends,,VAN,,,Ugin's Fate,Unclear
+Commander Collection: Green,Commander Collection: Green,Commander Collection: Green,CC1,,Commander Collection: Green,,VI,,,Duel Decks: Elspeth vs. Kiora,Modern
+Zendikar Rising,Zendikar Rising,Zendikar Rising,ZNR,ZNR_F,Zendikar Rising,,VMA,,,From the Vault: Angels,Modern
+Zendikar Rising Commander,Zendikar Rising Commander,Zendikar Rising Commander,ZNR,ZNR_F,Commander: Zendikar Rising,,WAR,,,Duel Decks: Zendikar vs. Eldrazi,Modern
+Time Spiral Remastered,Time Spiral Remastered,Time Spiral Remastered,,,Time Spiral Remastered,,WL,,,Zendikar Expeditions,EDH
+Zendikar Rising Expeditions,Zendikar Rising Expeditions,Zendikar Rising Expeditions,,EXP,Zendikar Rising Expeditions,,WWK,,,Judge Gift Cards 2015,Unclear
+Foreign Black Border,,,,,Revised Edition (Foreign Black Border),,XLN,,,Duel Decks: Blessed vs. Cursed,Modern
+Foreign Black Border,,,,,Fourth Edition (Foreign Black Border),,ZEN,,,From the Vault: Lore,EDH
+Foreign White Border,,,,,Revised Edition (Foreign White Border),,THB,,,Duel Decks: Nissa vs. Ob Nixilis,Modern
+Foreign White Border,,,,,Fourth Edition (Foreign White Border),,MB1,,,Kaladesh Inventions,EDH
+Mystery Booster Retail Edition Foils,Mystery Booster/The List,Mystery Booster Retail Edition Foils,,FMB1,Mystery Booster: Retail Exclusives,,C20,,,Aether Revolt Promos,Pioneer
+Amonkhet Invocations,Masterpiece Series:  Invocations,Masterpiece Series: Amonkhet Invocations,MS3,,Masterpiece Series: Amonkhet Invocations,,M21,,,Duel Decks: Mind vs. Might,Modern
+Zendikar Expeditions,Masterpiece Series: Expeditions,Masterpiece Series: Expeditions,EXP,,Zendikar Expeditions,,SS3,,,Amonkhet Invocations,EDH
+Zendikar Rising Expeditions,Zendikar Rising Expeditions,Zendikar Rising Expeditions,ZRE,,Zendikar Rising Expeditions,,JMP,,,Ixalan Promos,Pioneer
+Mythic Edition,Masterpiece Series: Mythic Edition,Guilds of Ravnica Masterpieces,MED,,Mythic Edition: Guilds of Ravnica,,P2XM,,,Duel Decks: Merfolk vs. Goblins,Modern
+Mythic Edition,Masterpiece Series: Mythic Edition,Ravnica Allegiance Masterpieces ,MED,,Mythic Edition: Ravnica Allegiance,,CMR,,,2017 Gift Pack,Unclear
+Mythic Edition,Masterpiece Series: Mythic Edition,War of the Spark Masterpieces ,MED,,Mythic Edition: War of the Spark,,CC1,,,Duel Decks: Elves vs. Inventors,Modern
+Secret Lair Drop,Secret Lair,Secret Lair,SLD,SLD_F,Secret Lair Series,,ZNR,,,Judge Gift Cards 2018,Unclear
+,,,,,,,,,,RNA Guild Kit,Pioneer
+,,,,,,,,,,Ultimate Box Topper,Unclear
+,,,,,,,,,,Core Set 2020 Promos,Pioneer
+,,,,,,,,,,Throne of Eldraine Promos,Standard
+,,,,,,,,,,Ponies: The Galloping,Unclear
+,,,,,,,,,,Game Night 2019,Unclear
+,,,,,,,,,,Secret Lair Drop,EDH
+,,,,,,,,,,Unsanctioned,Unclear
+,,,,,,,,,,Theros Beyond Death,Standard
+,,,,,,,,,,Mystery Booster,Unclear
+,,,,,,,,,,Ikoria: Lair of Behemoths,Standard
+,,,,,,,,,,Commander 2020,EDH
+,,,,,,,,,,Core Set 2021,Standard
+,,,,,,,,,,Secret Lair Drop,Unclear
+,,,,,,,,,,Jumpstart,EDH
+,,,,,,,,,,Signature Spellbook: Chandra,Unclear
+,,,,,,,,,,Double Masters Box Toppers,EDH
+,,,,,,,,,,Double Masters,EDH
+,,,,,,,,,,Commander Legends,EDH
+,,,,,,,,,,Commander Collection: Green,EDH
+,,,,,,,,,,Zendikar Rising,Standard
+,,,,,,,,,,Time Spiral Remastered,EDH
