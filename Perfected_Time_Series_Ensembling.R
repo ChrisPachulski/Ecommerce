@@ -221,7 +221,7 @@ set_dates_xreg = dbSendQuery(con, statement = statement) %>% dbFetch(., n = -1) 
     select(-set) %>% replace(is.na(.),0)
 
 raw_shortlist_tbl = as.data.frame(range_read(drive_get("Wolfs_Buylist_Review"),"Current_BuyList")) %>% 
-    select(data.name,data.edition,data.is_foil,Set_Bucket,Tiers) %>% dplyr::slice(1:1250) %>%
+    select(data.name,data.edition,data.is_foil,Set_Bucket,Tiers) %>% dplyr::slice(1:750) %>%
     mutate(data.is_foil = as.character(data.is_foil)) %>% replace(is.na(.), "") %>%
     mutate(data.edition = ifelse(data.edition == "Promotional",data.variation,data.edition),
            data.edition = gsub("\\/The List","",data.edition) ) %>%
@@ -230,21 +230,37 @@ raw_shortlist_tbl = as.data.frame(range_read(drive_get("Wolfs_Buylist_Review"),"
     mutate(rarity = Updated_Tracking_Keys$rarity[match(Semi, Updated_Tracking_Keys$Semi)]) %>%
     mutate(number = Updated_Tracking_Keys$number[match(Semi, Updated_Tracking_Keys$Semi)]) %>%
     replace(is.na(.), "") %>%
-    mutate(CK_Key = trimws(paste(data.name, data.edition, rarity," ",data.is_foil, sep=""))) %>% 
-    mutate(param = Updated_Tracking_Keys$tcg_ID[match(CK_Key, Updated_Tracking_Keys$Key)]) %>%
-    na.omit() #%>%
-    #select(-param, -CK_Key, -number, -Semi)
+    mutate(Key = trimws(paste(data.name, data.edition, rarity," ",data.is_foil, sep=""))) %>% 
+    mutate(param = Updated_Tracking_Keys$tcg_ID[match(Key, Updated_Tracking_Keys$Key)]) %>%
+    na.omit() %>%
+    select(Key,param)
 
-#raw_shortlist_tbl %>% view()
+
+con <- gaeas_cradle("wolfoftinstreet@gmail.com")
+statement <- paste(
+  'SELECT Key, Param param FROM `gaeas-cradle.kpi.*` 
+WHERE Ranking <= 25 and Param is not NULL and 
+_Table_Suffix between 
+FORMAT_DATE("%Y_%m_%d", DATE_SUB(CURRENT_DATE(), INTERVAL 90 DAY)) AND 
+FORMAT_DATE("%Y_%m_%d", DATE_SUB(CURRENT_DATE(), INTERVAL -1 DAY))  ',
+  sep = ""
+)
+
+kpi_query <- dbSendQuery(con, statement = statement) %>% dbFetch(., n = -1) %>% distinct()
+
+raw_shortlist_tbl <- rbind(kpi_query,raw_shortlist_tbl) %>% as.data.frame() %>% distinct()
+
+#raw_shortlist_tbl %>% filter(grepl("Jhoira,", as.character(Key)))
 
 a = 1
-b = 35
+b = 50
 Start_Time = Sys.time()
-for(i in 1:36){
+loop_limit = round(nrow(raw_shortlist_tbl)/50,0)-1
+for(i in 1:2){
 shortlist_tbl = raw_shortlist_tbl %>% dplyr::slice(a:b)                                                 
 
-a = a + 35
-b = b + 35
+a = a + 50
+b = b + 50
 if(b > 1250){b = 1250}
 Short_list_params = NULL
 for(i in unique(shortlist_tbl$param)){
@@ -261,7 +277,7 @@ statement <- paste(
     'WHERE Foil_Status not like "%FOIL%" and (Rarity like "R" or Rarity like "M" or Rarity like "U") and a.Set is not NULL and param is not NULL ',
     'AND param in (',Short_list_params,') ',
     'and _TABLE_SUFFIX BETWEEN ',
-    'FORMAT_DATE("%Y_%m_%d", DATE_SUB(CURRENT_DATE(), INTERVAL 300 DAY)) AND ',
+    'FORMAT_DATE("%Y_%m_%d", DATE_SUB(CURRENT_DATE(), INTERVAL 146 DAY)) AND ',
     'FORMAT_DATE("%Y_%m_%d", DATE_SUB(CURRENT_DATE(), INTERVAL -1 DAY)) ',
     "Order By Date asc; ",
     sep = ""
@@ -284,8 +300,10 @@ nrow((unique_card))
 min(unique_card$Date)
 
 key_count = unique_card  %>% group_by(Key) %>% tally() %>% as.data.frame()
-unique_card = unique_card %>% left_join(key_count, by = c("Key"="Key")) %>% filter(n > 90) %>% select(-n)
+unique_card = unique_card %>% left_join(key_count, by = c("Key"="Key")) %>% filter(n > 10) %>% select(-n)
 individual_keys = unique_card %>% select(Key) %>% distinct()
+
+#unique_card %>% filter(grepl("Conquer",Key)) %>% arrange(desc(Date))
 #for(i in 1:nrow(individual_keys)){
 #    individual_card = unique_card %>% filter(Key == as.character(individual_keys[i,]))
 # Training & Future Data Preparation ---------------------------------------------------------------------------------
@@ -295,13 +313,13 @@ full_tbl = unique_card                                   %>%
     pad_by_time(Date, .by = "day", .pad_value = NA)        %>%
     fill(BL, .direction = "down")                        %>%
     ungroup()                                            %>%
-    #mutate(BL = log1p(BL))                               %>%
+    mutate(BL = log1p(BL))                               %>%
     group_by(Key)                                        %>%
     future_frame(Date, .length_out = 28, .bind_data = T) %>%
     ungroup()                                            %>%
     left_join(set_dates_xreg, by = c("Date"="rdate"))    %>%
     distinct()                                           %>%
-    fill(Rarity,Set_Bucket,Tiers,manaCost,types,colors,printings,edhrecRank, .direction = "down")               %>%
+    fill(Rarity, manaCost,types,colors,printings,edhrecRank, .direction = "down")               %>%
     ungroup()                                            %>%
     mutate(gap = Date - lag(Date))                       %>% 
     filter(gap != 0)                                     %>% 
@@ -462,7 +480,7 @@ wflw_fit_xgboost_tune = wflw_spec_xgboost_tune %>%
     fit(train_cleaned)
 
 # Random Forest -----------------------------------------------------------
-
+set.seed(253)
 model_spec_rf_tune = rand_forest(
     mode           = "regression",
     mtry           = tune(),
@@ -491,7 +509,7 @@ wflw_fit_rf_tune = wflw_spec_rf_tune %>%
 
 
 # Earth Tuning ------------------------------------------------------------
-
+set.seed(253)
 model_spec_mars_tune = mars(
     mode           = "regression",
     num_terms      = tune(),
@@ -531,7 +549,7 @@ all_models_and_tuned_tbl = modeltime_table(
 calibration_tbl = all_models_and_tuned_tbl %>% modeltime_calibrate(testing(splits))
 
 calibration_tbl %>% modeltime_accuracy() %>% arrange(mae)
-
+set.seed(253)
 #calibration_tbl %>% 
 #  modeltime_forecast(new_data = testing(splits), actual_data = data_prepared_tbl, keep_data = T) %>% group_by(Key) %>% 
 #  plot_modeltime_forecast(.facet_ncol = 4 )
@@ -547,7 +565,7 @@ resamples_tscv = train_cleaned %>% ungroup() %>%
 
 #resamples_tscv %>% tk_time_series_cv_plan() %>% plot_time_series_cv_plan(Date, Key)
 
-
+set.seed(253)
 model_tuned_resample_tbl = all_models_and_tuned_tbl %>%
     modeltime_fit_resamples(
         resamples = resamples_tscv,
@@ -567,17 +585,17 @@ ensemble_fit = all_models_and_tuned_tbl %>%
 #ensemble_average()
 #type = "median")
 
-
+set.seed(253)
 model_ensemble_tbl = modeltime_table(ensemble_fit) 
 
 model_ensemble_tbl %>% modeltime_accuracy(testing(splits))
 
 forecast_ensemble_tbl = model_ensemble_tbl %>% modeltime_forecast(new_data    = testing(splits) ,
                                                                   actual_data = data_prepared_tbl,
-                                                                  keep_data   = T) #%>%
-#mutate(
-#  across(.cols = c(.value, BL), .fns = expm1)
-#) #%>% group_by(Key) %>% arrange(Key,Date) %>% View()
+                                                                  keep_data   = T) %>%
+mutate(
+  across(.cols = c(.value, BL), .fns = expm1)
+) %>% group_by(Key) %>% arrange(Key,Date)
 
 #forecast_ensemble_tbl %>%  group_by(Key) %>% plot_modeltime_forecast(.facet_ncol = 4)
 
@@ -603,6 +621,10 @@ model_ensemble_refit_tbl = model_ensemble_tbl %>%
 
 recombined_tbl = NULL
 
+# recombined_tbl %>% filter(grepl("Conquer",Key)) %>% arrange(desc(Date)) %>% view()
+# data_prepared_tbl %>% filter(grepl("Conquer",Key)) %>% arrange(desc(Date)) %>% view()
+# 
+
 #model_ensemble_refit_tbl %>% 
 #    modeltime_forecast(new_data = future_tbl,
 #                       actual_data =  data_prepared_tbl,
@@ -616,8 +638,8 @@ recombined_tbl = NULL
 recombined_tbl = model_ensemble_refit_tbl %>% 
     modeltime_forecast(new_data = future_tbl,
                        actual_data =  data_prepared_tbl,
-                       keep_data = T) #%>%
-#mutate(.value = expm1(.value), BL = expm1(BL))     
+                       keep_data = T) %>%
+mutate(.value = expm1(.value), BL = expm1(BL))     
 
 Ensemble_By_Range = function(recombined_tbl,days){
     results = recombined_tbl %>%
@@ -637,7 +659,7 @@ Ensemble_By_Range = function(recombined_tbl,days){
                Forecasted_Gains_Best = round(diff + round(mae,1),2),
                Forecasted_Growth = round(diff/lagged,2)) %>%
         select(-.value,-diff,-mae,-lagged) %>%
-        filter(Forecasted_Growth >= .15) %>%
+        filter(Forecasted_Growth >= .15 & Current_BL >= 1.50) %>%
         arrange(desc(Forecasted_Growth),desc(Forecasted_Gains)) #%>% 
         #filter((Current_BL * 5) >= Forecast_BL)
     
@@ -673,6 +695,8 @@ one_four_combined_tbls = rbind(one_week_combined_tbl,
                                three_week_combined_tbl,
                                four_week_combined_tbl)
 
+expanded_all_forecasts %>% arrange(Key) %>% view()
+
 all_four_week_keys  = one_four_combined_tbls %>% group_by(Key) %>% tally() %>% arrange(desc(n)) %>% filter(n == max(n)) %>% select(Key)
 todays_tier_one = one_four_combined_tbls %>% filter( one_four_combined_tbls$Key %in% all_four_week_keys$Key) %>% arrange(Key, desc(Date))
 
@@ -683,6 +707,7 @@ todays_tier_two = one_four_combined_tbls %>% filter( one_four_combined_tbls$Key 
 two_week_keys  = one_four_combined_tbls %>% group_by(Key) %>% tally() %>% arrange(desc(n)) %>% filter(n == (max(n)-2)) %>% select(Key)
 todays_tier_three = one_four_combined_tbls %>% filter( one_four_combined_tbls$Key %in% two_week_keys$Key) %>% arrange(Key, desc(Date)) 
 
+expanded_all_forecasts %>% filter(grepl("Jhoira, Weatherl",Key)) %>% view()
 
 
 Key_List <- paste('"',unique(one_four_combined_tbls$Key), '"', sep = "") %>% unlist() %>% map_chr(paste(sep="")) %>% toString() %>% str_replace("^\\,\\s+","") %>% str_replace("\\,\\s+$","") 
@@ -730,3 +755,5 @@ todays_tier_three_hit_tbl = todays_tier_three %>% mutate(Dated_Key = paste(Key, 
     arrange(Key,desc(Date)) %>% mutate(Four_Wk_Lag_BL = BL_AVG, BL_Movement = bl_diff) %>% 
     select(-Dated_Key,BL_AVG,bl_diff)
 
+
+todays_tier_one_hit_tbl %>% view()

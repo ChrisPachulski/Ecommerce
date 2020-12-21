@@ -106,7 +106,7 @@ Starter 1999,Starter 1999,Starter 1999,S99,,Starter 1999,,LEA,M21_F,,Betrayers o
 The Dark,The Dark,The Dark,DRK,DRK_F,The Dark,,LEB,THB_F,,Urza's Destiny,Exclude
 Theros,Theros,Theros,THS,THS_F,Theros,,LEG,IKO_F,,Legends,Exclude
 Throne of Eldraine,Throne of Eldraine,Throne of Eldraine,ELD,ELD_F,Throne of Eldraine,,LGN,ZNR_F,,Modern Event Deck 2014,Unclear
-Throne of Eldraine Variants,Throne of Eldraine Variants,Throne of Eldraine Promos,PELD,PELD_F,,,LRW,,,Alliances,Exclude
+Throne of Eldraine Variants,Throne of Eldraine Variants,Throne of Eldraine Promos,PELD,PELD_F,,,LRW,KHM_F,,Alliances,Exclude
 Time Spiral,Time Spiral,Time Spiral,TSP,TSP_F,Time Spiral,,M10,,,Duel Decks: Mind vs. Might,Unclear
 Time Spiral Timeshifted,Timeshifted,'Time Spiral Timeshifted',TSB,TSB_F,Timeshifted,,M11,,,Commander Anthology Volume II,EDH
 Torment,Torment,Torment,TOR,TOR_F,Torment,,M12,,,RNA Guild Kit,Pioneer
@@ -248,7 +248,7 @@ Mythic Edition,Masterpiece Series: Mythic Edition,Guilds of Ravnica Masterpieces
 Mythic Edition,Masterpiece Series: Mythic Edition,Ravnica Allegiance Masterpieces ,MED,,Mythic Edition: Ravnica Allegiance,,CMR,,,2017 Gift Pack,Unclear
 Mythic Edition,Masterpiece Series: Mythic Edition,War of the Spark Masterpieces ,MED,,Mythic Edition: War of the Spark,,CC1,,,Duel Decks: Elves vs. Inventors,Modern
 Secret Lair Drop,Secret Lair,Secret Lair,SLD,SLD_F,Secret Lair Series,,ZNR,,,Judge Gift Cards 2018,Unclear
-,,,,,,,,,,RNA Guild Kit,Pioneer
+Kaldheim,Kaldheim,Kaldheim,KHM,KHM_F,Kaldheim,,KHM,,,RNA Guild Kit,Pioneer
 ,,,,,,,,,,Ultimate Box Topper,Unclear
 ,,,,,,,,,,Core Set 2020 Promos,Pioneer
 ,,,,,,,,,,Throne of Eldraine Promos,Standard
@@ -270,3 +270,4 @@ Secret Lair Drop,Secret Lair,Secret Lair,SLD,SLD_F,Secret Lair Series,,ZNR,,,Jud
 ,,,,,,,,,,Commander Collection: Green,EDH
 ,,,,,,,,,,Zendikar Rising,Standard
 ,,,,,,,,,,Time Spiral Remastered,EDH
+,,,,,,,,,,Kaldheim,Standard
