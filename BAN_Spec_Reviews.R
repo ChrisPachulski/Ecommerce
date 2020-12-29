@@ -60,7 +60,7 @@ gs4_auth(email = "pachun95@gmail.com",use_oob=TRUE)
 specs <- range_read(drive_get("BAN Spec Performance"),"DataEntry")
 
 compiled_results= NULL
-for(i in 29:nrow(specs)){
+for(i in 1:nrow(specs)){
     cardofinterest = specs[i,] %>% select(Card)
     setofinterest = specs[i,] %>% select(Set)
     period_length = specs[i,] %>% select(`Days Since Call`)

@@ -1,5 +1,7 @@
 pacman::p_load(tidyverse,httr,jsonlite,ranger,timetk,lubridate,bigrquery,modeltime,modeltime.ensemble,recipes,rsample,kernlab,glmnet,kknn,earth,tidymodels,rules,doFuture,future,tune,plotly,googlesheets4,googledrive)
-pacman::p_load(dplyr)
+invisible(right <- function(text, num_char) {
+    substr(text, nchar(text) - (num_char-1), nchar(text))
+})
 options(httr_oob_default=TRUE) 
 options(gargle_oauth_email = "pachun95@gmail.com")
 drive_auth(email = "pachun95@gmail.com",use_oob=TRUE)
@@ -239,28 +241,28 @@ set_dates_xreg        = dbSendQuery(con, statement = statement) %>%
 
 #
 
-raw_shortlist_tbl = as.data.frame(range_read(drive_get("Wolfs_Buylist_Review"),"Current_BuyList"))          %>% 
-                    select(data.name,data.edition,data.is_foil)                                             %>% 
-                    dplyr::slice(1:1250)                                                                    %>%
-                    mutate(data.is_foil = as.character(data.is_foil)) %>% replace(is.na(.), "")             %>%
-                    mutate(data.edition = ifelse(data.edition == "Promotional",data.variation,data.edition),
-                           data.edition = gsub("\\/The List","",data.edition))                              %>%
-                    mutate(data.edition = ck_conversion$Standardized[match(data.edition,ck_conversion$CK)])       %>%
-                    mutate(Semi         = paste(data.name,data.edition, sep=""))                                  %>%
-                    mutate(rarity       = Updated_Tracking_Keys$rarity[match(Semi, Updated_Tracking_Keys$Semi)])  %>%
-                    mutate(number       = Updated_Tracking_Keys$number[match(Semi, Updated_Tracking_Keys$Semi)])  %>%
-                    replace(is.na(.), "")                                                                         %>%
-                    mutate(Key          = trimws(paste(data.name, data.edition, rarity," ",data.is_foil, sep="")))%>% 
-                    mutate(param        = Updated_Tracking_Keys$tcg_ID[match(Key, Updated_Tracking_Keys$Key)])    %>%
-                    na.omit()                                                                                     %>%
-                    select(Key,param)
+# raw_shortlist_tbl = as.data.frame(range_read(drive_get("Wolfs_Buylist_Review"),"Current_BuyList"))          %>% 
+#                     select(data.name,data.edition,data.is_foil)                                             %>% 
+#                     dplyr::slice(1:1250)                                                                    %>%
+#                     mutate(data.is_foil = as.character(data.is_foil)) %>% replace(is.na(.), "")             %>%
+#                     mutate(data.edition = ifelse(data.edition == "Promotional",data.variation,data.edition),
+#                            data.edition = gsub("\\/The List","",data.edition))                              %>%
+#                     mutate(data.edition = ck_conversion$Standardized[match(data.edition,ck_conversion$CK)])       %>%
+#                     mutate(Semi         = paste(data.name,data.edition, sep=""))                                  %>%
+#                     mutate(rarity       = Updated_Tracking_Keys$rarity[match(Semi, Updated_Tracking_Keys$Semi)])  %>%
+#                     mutate(number       = Updated_Tracking_Keys$number[match(Semi, Updated_Tracking_Keys$Semi)])  %>%
+#                     replace(is.na(.), "")                                                                         %>%
+#                     mutate(Key          = trimws(paste(data.name, data.edition, rarity," ",data.is_foil, sep="")))%>% 
+#                     mutate(param        = Updated_Tracking_Keys$tcg_ID[match(Key, Updated_Tracking_Keys$Key)])    %>%
+#                     na.omit()                                                                                     %>%
+#                     select(Key,param)
 
 
 statement <- paste(
-  'SELECT Key, Param param FROM `gaeas-cradle.kpi.*` 
-    WHERE Ranking <= 500 and Param is not NULL and 
+  'SELECT Key, Param param FROM `gaeas-cradle.ck_funny_money.*` 
+    WHERE CK_Backing <= .50 and Param is not NULL and 
     _Table_Suffix between 
-    FORMAT_DATE("%Y_%m_%d", DATE_SUB(CURRENT_DATE(), INTERVAL 90 DAY)) AND 
+    FORMAT_DATE("%Y_%m_%d", DATE_SUB(CURRENT_DATE(), INTERVAL 240 DAY)) AND 
     FORMAT_DATE("%Y_%m_%d", DATE_SUB(CURRENT_DATE(), INTERVAL -1 DAY))  ',
   sep = ""
 )
@@ -275,7 +277,6 @@ for(i in unique(kpi_query$param)){
 
 Short_list_params = gsub(",$","",Short_list_params)
 
-
 statement <- paste(
     "Select * ",
     "FROM ",
@@ -288,8 +289,8 @@ statement <- paste(
     'FORMAT_DATE("%Y_%m_%d", DATE_SUB(CURRENT_DATE(), INTERVAL -1 DAY)) ',
     'GROUP BY 1 ',
     ") b ",
-    "WHERE avg_bl >= 1.99 ",
-    "LIMIT 2000 ",
+    "WHERE avg_bl >= 1.50 ",
+    "LIMIT 5000 ",
     sep = ""
 )
 
@@ -311,12 +312,14 @@ statement <- paste(
     'and _TABLE_SUFFIX BETWEEN ',
     'FORMAT_DATE("%Y_%m_%d", DATE_SUB(CURRENT_DATE(), INTERVAL 176 DAY)) AND ',
     'FORMAT_DATE("%Y_%m_%d", DATE_SUB(CURRENT_DATE(), INTERVAL -1 DAY)) AND ',
-    'a.BL >= .99 ',
+    'NOT regexp_contains(a.set, r"Alpha|Beta|Portals|Antiquities|Arabian|Scourge|Ice Age|The Dark|^Legends$|Odyssey|Portal Three|Unlimited|Guild Kit") ',
     "Order By Date asc; ",
     sep = ""
 )
 
 raw_query <- dbSendQuery(con, statement = statement) %>% dbFetch(., n = -1) %>% distinct()
+
+loop_limit_raw = raw_query %>% select(Key) %>% distinct()
 
 statement <- paste(
     "SELECT CONCAT(Key,DATE) as dated_key, Key, BL_QTY, MKT, Sellers, TCG_Rank, CK_ADJ_Rank ",
@@ -332,8 +335,11 @@ statement <- paste(
 
 lagged_raw_query <- dbSendQuery(con, statement = statement) %>% dbFetch(., n = -1) %>% distinct() %>% select(-Key)
 
+# Forecast Loop -----------------------------------------------------------
+
+
 Start_Time = Sys.time()
-loop_limit = round(nrow(raw_shortlist_tbl)/50,0)
+loop_limit = round(nrow(loop_limit_raw)/50,0)
 
 one_week_combined_tbl   = NULL
 two_week_combined_tbl   = NULL
@@ -347,11 +353,19 @@ b = 50
 for(i in 1:loop_limit){
 this_round = (raw_query %>% select(Key) %>% distinct() %>% dplyr::slice(a:b))                                                 
 
+mythic_add = raw_query %>% filter(grepl(".*M$",Key)) %>% select(Key) %>% head(1)
+rare_add = raw_query %>% filter(grepl(".*R$",Key)) %>% select(Key) %>% head(1)
+
+if(right(this_round$Key,1) %>% unique() %>% length() == 1){this_round = rbind(this_round,mythic_add )}
+if(right(this_round$Key,1) %>% unique() %>% length() == 1){this_round = rbind(this_round,rare_add)}
+
 raw_list = raw_query %>% filter(Key %in% this_round$Key)                                                
+
+raw_list %>% mutate(Rarity = as.factor(Rarity)) %>% summary()
 
 a = a + 50
 b = b + 50
-if(b > 1250){b = 1250}
+if(b > 3000){b = 3000}
 
 unique_card = raw_list %>% #filter(Key == ukey) %>% 
     mutate(BL = ifelse(is.na(BL), (0), BL )) %>%
@@ -367,7 +381,7 @@ nrow((unique_card))
 min(unique_card$Date)
 
 key_count = unique_card  %>% group_by(Key) %>% tally() %>% as.data.frame()
-unique_card = unique_card %>% left_join(key_count, by = c("Key"="Key")) %>% filter(n > 40) %>% select(-n)
+unique_card = unique_card %>% left_join(key_count, by = c("Key"="Key")) %>% filter(n > 10) %>% select(-n)
 individual_keys = unique_card %>% select(Key) %>% distinct()
 
 #unique_card %>% filter(grepl("Conquer",Key)) %>% arrange(desc(Date))
@@ -377,7 +391,7 @@ individual_keys = unique_card %>% select(Key) %>% distinct()
 full_tbl = unique_card                                   %>%
     #select(Date,Key,BL)                                  %>% 
     group_by(Key)                                        %>% 
-    pad_by_time(Date, .by = "day", .pad_value = NA)        %>%
+    pad_by_time(Date, .by = "day", .pad_value = NA)      %>%
     fill(BL, .direction = "down")                        %>%
     ungroup()                                            %>%
     group_by(Key)                                        %>%
@@ -543,6 +557,7 @@ full_tbl = unique_card                                   %>%
 data_prepared_tbl = full_tbl %>% 
     filter(!is.na(BL))       %>% 
     drop_na()
+#data_prepared_tbl %>% select(Rarity) %>% distinct()
 
 future_tbl =  full_tbl                                                          %>%
     filter(is.na(BL))                                                           %>%
@@ -556,11 +571,10 @@ train_cleaned = training(splits)              %>%
     mutate(BL = ts_clean_vec(BL, period = 7)) %>%
     ungroup()
 
-
 recipe_spec = recipe(BL ~., data = train_cleaned)                                    %>%
     update_role(rowid, new_role = "indicator")                                       %>%
     step_timeseries_signature(Date)                                                  %>%
-    step_rm(matches("(.xts$)|(.iso$)|(hour)|(minute)|(second)|(am.pm)|(Date_year)|(rarity)")) %>%
+    step_rm(matches("(.xts$)|(.iso$)|(hour)|(minute)|(second)|(am.pm)|(Date_year)")) %>%
     step_normalize(Date_index.num)                                                   %>%
     step_other(Key)                                                                  %>%
     step_dummy(all_nominal(), one_hot = T)
@@ -900,7 +914,7 @@ boxplot_ranking_tbl = rbind(boxplot_ranking_tbl,boxplot_tbl)
 expanded_all_forecasts = rbind(expanded_all_forecasts,recombined_tbl)
 
 Round_End = Sys.time()
-print(paste("Forecasts 1 Through",if(b != 1250){b-50}else{1250},"Took",Round_End - Start_Time))
+print(paste("Forecasts 1 Through",if(b != 3000){b-50}else{3000},"Took",Round_End - Start_Time))
 }
 Final_Time = Sys.time()
 print(Final_Time - Start_Time)
@@ -921,6 +935,7 @@ one_four_combined_tbls = rbind(one_week_final_tbl  ,
 
 # Tier One: Appears as a gainer all 4 weeks:
 all_four_week_keys  = one_four_combined_tbls %>% 
+                      filter(Forecasted_Gains_Worst/Current_BL >= .10) %>%
                       group_by(Key)          %>% 
                       tally()                %>% 
                       arrange(desc(n))       %>% 
@@ -933,8 +948,18 @@ todays_tier_one     = one_four_combined_tbls           %>%
                              all_four_week_keys$Key)   %>% 
                       arrange(Key, desc(Date))
 
+tier_1_keys_cs = todays_tier_one %>% group_by(Key) %>% summarize(max_growth = max(Forecasted_Growth),
+                                                Current_BL = Current_BL) %>% 
+    distinct() %>% 
+    ungroup() %>% 
+    arrange(desc(max_growth)) %>%
+    filter(max_growth >= .20) %>%
+    mutate(tier = 1)
+
+
 # Tier Two: Appears as a gainer for 3/4 weeks:
 three_week_keys     =  one_four_combined_tbls %>% 
+                       filter(Forecasted_Gains_Worst/Current_BL >= .10) %>%
                        group_by(Key)          %>% 
                        tally()                %>% 
                        arrange(desc(n))       %>% 
@@ -947,8 +972,18 @@ todays_tier_two     = one_four_combined_tbls           %>%
                              three_week_keys$Key)      %>% 
                       arrange(Key, desc(Date)) 
 
+tier_2_keys_cs = todays_tier_two %>% group_by(Key) %>% summarize(max_growth = max(Forecasted_Growth),
+                                                Current_BL = Current_BL) %>% 
+    distinct() %>% 
+    ungroup() %>% 
+    arrange(desc(max_growth)) %>%
+    filter(max_growth >= .35) %>%
+    mutate(tier = 2)
+
+
 # Tier Three: Appears as a gainer for 2/4 weeks:
-two_week_keys       = one_four_combined_tbls %>% 
+two_week_keys       = one_four_combined_tbls %>%
+                      filter(Forecasted_Gains_Worst/Current_BL >= .10) %>%
                       group_by(Key)          %>% 
                       tally()                %>% 
                       arrange(desc(n))       %>% 
@@ -961,13 +996,24 @@ todays_tier_three   = one_four_combined_tbls           %>%
                              two_week_keys$Key)        %>% 
                       arrange(Key, desc(Date)) 
 
+tier_3_keys_cs = todays_tier_three %>% group_by(Key) %>% summarize(max_growth = max(Forecasted_Growth),
+                                                                 Current_BL = Current_BL) %>% 
+    distinct() %>% 
+    ungroup() %>% 
+    arrange(desc(max_growth)) %>%
+    filter(max_growth >= .45) %>%
+    mutate(tier = 3)
+
+tiers_for_cs_puchasing = rbind(tier_1_keys_cs,tier_2_keys_cs,tier_3_keys_cs)
+
+con <- gaeas_cradle("wolfoftinstreet@gmail.com")
+currentDate <- Sys.Date()
+mybq <- bq_table(project = "gaeas-cradle", dataset = "cs_tiers_ensemble", table = paste(gsub("-","_",currentDate),"_CS_TIERS",sep=""))
+bq_table_upload(x=mybq, values = tiers_for_cs_puchasing, fields=as_bq_fields(tiers_for_cs_puchasing),nskip = 1, source_format = "CSV",create_disposition = "CREATE_IF_NEEDED", write_disposition = "WRITE_TRUNCATE")
+print("BQ CS Tiers Upload Successful!")
 
 
 Key_List <- paste('"',unique(one_four_combined_tbls$Key), '"', sep = "") %>% unlist() %>% map_chr(paste(sep="")) %>% toString() %>% str_replace("^\\,\\s+","") %>% str_replace("\\,\\s+$","") 
-
-
-currentDate <- Sys.Date()
-con <- gaeas_cradle("wolfoftinstreet@gmail.com")
 
 statement <- paste('SELECT * 
                     FROM ( 
@@ -1149,6 +1195,49 @@ slimmed_sf_tbl = grand_slam_tbl %>% select(Key,current_val,iqr,sd,max_forecast_v
     mutate(iqr = round(iqr,1),
            sd = round(sd,1),
            max_forecast_value = round(max_forecast_value,1),
-           plus_minus = round(plus_minus,2))
+           plus_minus = round(plus_minus,2)) 
 
-slimmed_sf_tbl %>% view()
+removal = slimmed_sf_tbl %>% group_by(Key) %>% tally() %>% arrange(desc(n)) %>% filter(n > 1)
+'%!in%' <- function(x,y)!('%in%'(x,y))
+
+slimmed_sf_tbl = slimmed_sf_tbl %>% filter( Key %!in% removal$Key )
+
+
+options(httr_oob_default=TRUE) 
+options(gargle_oauth_email = "pachun95@gmail.com")
+drive_auth(email = "pachun95@gmail.com",use_oob=TRUE)
+gs4_auth(email = "pachun95@gmail.com",use_oob=TRUE)
+
+tryCatch({Updated_Tracking_Keys <- read_csv("/home/cujo253/C20_Addition.csv", col_types = cols(hasFoil = col_character())) %>%
+    #rename(c("scryfall_id" = "scryfall","tcg_ID"="param","card" = "name", "set" = "Set", "rarity" = "Rarity","hasFoil" = "Foil")) %>%
+    rename(c("scryfall" = "scryfall_id","param"="tcg_ID","name" = "card", "Set" = "set", "Rarity" = "rarity","Foil" = "hasFoil")) %>%
+    mutate(Semi = paste(name, Set,sep=""))},error = function(e){Updated_Tracking_Keys <- read_csv("/home/cujo253/C20_Addition.csv", col_types = cols(hasFoil = col_character())) %>%
+        rename(c("scryfall_id" = "scryfall","tcg_ID"="param","card" = "name", "set" = "Set", "rarity" = "Rarity","hasFoil" = "Foil")) %>%
+        #rename(c("scryfall" = "scryfall_id","param"="tcg_ID","name" = "card", "Set" = "set", "Rarity" = "rarity","Foil" = "hasFoil")) %>%
+        mutate(Semi = paste(name, Set,sep=""))})
+
+Updated_Tracking_Keys = Updated_Tracking_Keys %>% replace_na(list(Foil = "")) %>%mutate(name = gsub("\\s\\/\\/.*","",name),
+                                                                                        Key = trimws(paste(name,Set,Rarity," ",Foil,sep="")),
+                                                                                        Semi = paste(name,Set,sep="")) 
+
+
+
+export_slim_sf_tbl = slimmed_sf_tbl %>% left_join(Updated_Tracking_Keys %>% select(Key, name, Set, Rarity), by =c("Key"="Key")) %>%
+    select(Key, name, Set, Rarity, everything()) %>% mutate(Safety = ifelse(sd > iqr, "Volatile","Not Volatile")) %>%
+    #select(-iqr,-sd) %>% 
+    distinct() #%>% filter(Classification == "S")
+
+ss <- drive_get("Ensemble_Time_Series")
+
+sheet_write(
+    export_slim_sf_tbl,
+    ss = ss,
+    sheet = "Todays_Forecast"
+)
+
+con <- gaeas_cradle("wolfoftinstreet@gmail.com")
+currentDate <- Sys.Date()
+mybq <- bq_table(project = "gaeas-cradle", dataset = "ensemble_forecast_results", table = paste(gsub("-","_",currentDate),"_ENSEMBLE",sep=""))
+bq_table_upload(x=mybq, values = export_slim_sf_tbl, fields=as_bq_fields(export_slim_sf_tbl),nskip = 1, source_format = "CSV",create_disposition = "CREATE_IF_NEEDED", write_disposition = "WRITE_TRUNCATE")
+print("BQ Forecast Upload Successful!")
+
