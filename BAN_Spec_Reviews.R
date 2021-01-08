@@ -58,7 +58,7 @@ drive_auth(email = "pachun95@gmail.com",use_oob=TRUE)
 gs4_auth(email = "pachun95@gmail.com",use_oob=TRUE)
 
 specs <- range_read(drive_get("BAN Spec Performance"),"DataEntry")
-
+#specs %>% tail() %>% view()
 compiled_results= NULL
 for(i in 1:nrow(specs)){
     cardofinterest = specs[i,] %>% select(Card)
@@ -70,7 +70,7 @@ for(i in 1:nrow(specs)){
     statement <- paste(
        'DECLARE cardofinterest DEFAULT "',cardofinterest,'"; ',
         'DECLARE setofinterest DEFAULT "',setofinterest,'"; ',
-        'With t1 as (Select *,round(BL_chg/BL_avg*100,2) as BL_Perc_Growth ,round((c.BL_chg/c.MKT_chg) *100,2) as BL_MKT_Perc_Ratio ',
+        'With t1 as (Select *,round((BL_chg/(BL_avg+.01))*100,2) as BL_Perc_Growth ,round((c.BL_chg/(c.MKT_chg+.01)) *100,2) as BL_MKT_Perc_Ratio ',
         'FROM ',
         '(Select b.Card, b.Set,b.rarity,number, ',
         'round(avg(BL),1) as BL_avg, round(sum(BL_change),2) as BL_chg, ',
@@ -113,9 +113,9 @@ for(i in 1:nrow(specs)){
     compiled_results = rbind(compiled_results,individual_result)
 }
 
-compiled_results = compiled_results %>% mutate(Speculator = specs$Speculator[match(paste(compiled_results$Card,compiled_results$Set), paste(specs$Card,specs$Set))],
+compiled_results_altered = compiled_results %>% mutate(Speculator = specs$Speculator[match(paste(compiled_results$Card,compiled_results$Set), paste(specs$Card,specs$Set))],
                             Days_Passed = specs$`Days Since Call`[match(paste(compiled_results$Card,compiled_results$Set), paste(specs$Card,specs$Set))],
                             Date_Called = specs$`Date Called`[match(paste(compiled_results$Card,compiled_results$Set), paste(specs$Card,specs$Set))]) %>%
     select(Speculator,Days_Passed, Date_Called, everything())
 
-sheet_write(compiled_results, drive_get("BAN Spec Performance"),"Performance")
+sheet_write(compiled_results_altered, drive_get("BAN Spec Performance"),"Performance")

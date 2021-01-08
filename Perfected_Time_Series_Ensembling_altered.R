@@ -73,7 +73,7 @@ sets_of_interest <- sets_of_interest[sets_of_interest != "TDAG"]
 sets_of_interest <- sets_of_interest[sets_of_interest != "TFTH"]
 sets_of_interest <- sets_of_interest[sets_of_interest != "FJMP"]
 
-sets_of_interest %>% unlist()
+#sets_of_interest %>% unlist()
 #temp$data$cards$leadershipSkills$commander
 
 Card_Dictionary <- NULL
@@ -146,7 +146,7 @@ for(set in sets_of_interest){
             info <- cbind(rdate,uuid,scryfall_id,mcmid,tcg_ID,card,set,abbr,rarity,number,types,manaCost,colors,hasFoil,hasNonFoil,isAlternative,standard,pioneer,modern,legacy,commander,pauper,ckid,ckid_f,edhrecRank,Printings,isPromo,isReserved,commander)
             Card_Dictionary <- rbind(Card_Dictionary,info)
         }
-    },error=function(e){next})
+    },error=function(e){print(paste("Error with set:",set))})
 }
 
 Card_Dictionary_backup <- Card_Dictionary
@@ -213,7 +213,7 @@ Entire_Dictionary <- rbind(Entire_Dictionary,Foil_Halfs)
 Entire_Dictionary$Key <- paste(Entire_Dictionary$card,Entire_Dictionary$set,Entire_Dictionary$rarity,Entire_Dictionary$hasFoil,Entire_Dictionary$number,sep="")
 Entire_Dictionary$Working_Key <- paste(Entire_Dictionary$card,Entire_Dictionary$set,Entire_Dictionary$rarity,Entire_Dictionary$hasFoil,sep="")
 names(Entire_Dictionary)[21] <- "commander_legal"
-colnames(Entire_Dictionary)
+#colnames(Entire_Dictionary)
 
 # Database Interaction & Local Uploads ------------------------------------
 
@@ -312,7 +312,7 @@ statement <- paste(
     'and _TABLE_SUFFIX BETWEEN ',
     'FORMAT_DATE("%Y_%m_%d", DATE_SUB(CURRENT_DATE(), INTERVAL 176 DAY)) AND ',
     'FORMAT_DATE("%Y_%m_%d", DATE_SUB(CURRENT_DATE(), INTERVAL -1 DAY)) AND ',
-    'NOT regexp_contains(a.set, r"Alpha|Beta|Portals|Antiquities|Arabian|Scourge|Ice Age|The Dark|^Legends$|Odyssey|Portal Three|Unlimited|Guild Kit") ',
+    'NOT regexp_contains(a.set, r"Alpha|Beta|^Portal|Antiquities|Arabian|Scourge|Ice Age|The Dark|^Legends$|Odyssey|Portal Three|Unlimited|Guild Kit") ',
     "Order By Date asc; ",
     sep = ""
 )
@@ -339,7 +339,7 @@ lagged_raw_query <- dbSendQuery(con, statement = statement) %>% dbFetch(., n = -
 
 
 Start_Time = Sys.time()
-loop_limit = round(nrow(loop_limit_raw)/50,0)
+loop_limit = round(nrow(loop_limit_raw)/50,0) #- 23
 
 one_week_combined_tbl   = NULL
 two_week_combined_tbl   = NULL
@@ -350,18 +350,18 @@ boxplot_ranking_tbl     = NULL
 a = 1
 b = 50
 
-for(i in 1:loop_limit){
+for(i in 11:loop_limit){
 this_round = (raw_query %>% select(Key) %>% distinct() %>% dplyr::slice(a:b))                                                 
 
-mythic_add = raw_query %>% filter(grepl(".*M$",Key)) %>% select(Key) %>% head(1)
-rare_add = raw_query %>% filter(grepl(".*R$",Key)) %>% select(Key) %>% head(1)
+mythic_add = raw_query %>% filter(grepl(".*M$",Key)) %>% select(Key) %>% head(5)
+rare_add = raw_query %>% filter(grepl(".*R$",Key)) %>% select(Key) %>% head(5)
 
 if(right(this_round$Key,1) %>% unique() %>% length() == 1){this_round = rbind(this_round,mythic_add )}
 if(right(this_round$Key,1) %>% unique() %>% length() == 1){this_round = rbind(this_round,rare_add)}
 
 raw_list = raw_query %>% filter(Key %in% this_round$Key)                                                
 
-raw_list %>% mutate(Rarity = as.factor(Rarity)) %>% summary()
+#raw_list %>% mutate(Rarity = as.factor(Rarity)) %>% summary()
 
 a = a + 50
 b = b + 50
@@ -395,7 +395,7 @@ full_tbl = unique_card                                   %>%
     fill(BL, .direction = "down")                        %>%
     ungroup()                                            %>%
     group_by(Key)                                        %>%
-    future_frame(Date, .length_out = 28, .bind_data = T) %>%
+    future_frame(Date, .length_out = 29, .bind_data = T) %>%
     ungroup()                                            %>%
     left_join(set_dates_xreg, by = c("Date"="rdate"))    %>%
     left_join(lagged_raw_query, by = c("dated_key"="dated_key")) %>%
@@ -564,7 +564,7 @@ future_tbl =  full_tbl                                                          
     mutate(across(.cols = contains("_lag"), .fns = ~ ifelse(is.nan(.x),NA,.x))) %>%
     fill(contains("_lag"), .direction = "down")
 
-splits = data_prepared_tbl %>% time_series_split(Date, assess = 28, cumulative = T)
+splits = data_prepared_tbl %>% time_series_split(Date, assess = 29, cumulative = T)
 
 train_cleaned = training(splits)              %>%
     group_by(Key)                             %>%
@@ -778,7 +778,7 @@ calibration_tbl %>% modeltime_accuracy() %>% arrange(mae)
 # Resampling --------------------------------------------------------------
 resamples_tscv = train_cleaned %>% ungroup() %>%
     time_series_cv(
-        assess      = 28,
+        assess      = 29,
         skip        = 14,
         cumulative  = T,
         slice_limit = 5
