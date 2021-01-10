@@ -1,3 +1,4 @@
+# Packages, Auths, & Functions --------------------------------------------
 pacman::p_load(tidyverse,httr,jsonlite,ranger,timetk,lubridate,bigrquery,modeltime,modeltime.ensemble,recipes,rsample,kernlab,glmnet,kknn,earth,tidymodels,rules,doFuture,future,tune,plotly,googlesheets4,googledrive)
 invisible(right <- function(text, num_char) {
     substr(text, nchar(text) - (num_char-1), nchar(text))
