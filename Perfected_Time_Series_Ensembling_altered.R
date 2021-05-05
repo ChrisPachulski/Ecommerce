@@ -263,7 +263,7 @@ statement <- paste(
   LEFT JOIN `gaeas-cradle.roster.mtgjson` b on b.tcg_id = a.Param
     WHERE CK_Backing <= .40 and Param is not NULL and 
     _Table_Suffix between 
-    FORMAT_DATE("%Y_%m_%d", DATE_SUB(CURRENT_DATE(), INTERVAL 240 DAY)) AND 
+    FORMAT_DATE("%Y_%m_%d", DATE_SUB(CURRENT_DATE(), INTERVAL 188 DAY)) AND 
     FORMAT_DATE("%Y_%m_%d", DATE_SUB(CURRENT_DATE(), INTERVAL -1 DAY))  ',
   sep = ""
 )
@@ -287,11 +287,11 @@ statement <- paste(
     'WHERE Foil_Status not like "%FOIL%" and (Rarity like "R" or Rarity like "M" or Rarity like "U") and a.Set is not NULL and param is not NULL ',
     'AND param in (',Short_list_params,') ',
     'and _TABLE_SUFFIX BETWEEN ',
-    'FORMAT_DATE("%Y_%m_%d", DATE_SUB(CURRENT_DATE(), INTERVAL 240 DAY)) AND ',
+    'FORMAT_DATE("%Y_%m_%d", DATE_SUB(CURRENT_DATE(), INTERVAL 188 DAY)) AND ',
     'FORMAT_DATE("%Y_%m_%d", DATE_SUB(CURRENT_DATE(), INTERVAL -1 DAY)) ',
     'GROUP BY 1 ',
     ") b ",
-    "WHERE avg_bl >= 3.50 ",
+    "WHERE avg_bl >= 2.50 ",
     "LIMIT 5000 ",
     sep = ""
 )
@@ -312,7 +312,7 @@ statement <- paste(
     'WHERE Foil_Status not like "%FOIL%" and (Rarity like "R" or Rarity like "M" or Rarity like "U") and a.Set is not NULL and param is not NULL ',
     'AND param in (',Short_list_params,') ',
     'and _TABLE_SUFFIX BETWEEN ',
-    'FORMAT_DATE("%Y_%m_%d", DATE_SUB(CURRENT_DATE(), INTERVAL 240 DAY)) AND ',
+    'FORMAT_DATE("%Y_%m_%d", DATE_SUB(CURRENT_DATE(), INTERVAL 188 DAY)) AND ',
     'FORMAT_DATE("%Y_%m_%d", DATE_SUB(CURRENT_DATE(), INTERVAL -1 DAY)) AND ',
     'NOT regexp_contains(a.set, r"Alpha|Beta|Guild Kit") ',
     "Order By Date asc; ",
@@ -321,7 +321,7 @@ statement <- paste(
 
 raw_query <- dbSendQuery(con, statement = statement) %>% dbFetch(., n = -1) %>% distinct()
 
-loop_limit_raw = raw_query %>% select(Key) %>% distinct() %>% head(1000)
+loop_limit_raw = raw_query %>% select(Key) %>% distinct()
 
 statement <- paste(
     "SELECT CONCAT(Key,DATE) as dated_key, Key, BL_QTY, MKT, Sellers, TCG_Rank, CK_ADJ_Rank ",
@@ -329,7 +329,7 @@ statement <- paste(
     'WHERE Foil_Status not like "%FOIL%" and (Rarity like "R" or Rarity like "M" or Rarity like "U") and a.Set is not NULL and param is not NULL ',
     'AND param in (',Short_list_params,') ',
     'and _TABLE_SUFFIX BETWEEN ',
-    'FORMAT_DATE("%Y_%m_%d", DATE_SUB(CURRENT_DATE(), INTERVAL 240 DAY)) AND ',
+    'FORMAT_DATE("%Y_%m_%d", DATE_SUB(CURRENT_DATE(), INTERVAL 188 DAY)) AND ',
     'FORMAT_DATE("%Y_%m_%d", DATE_SUB(CURRENT_DATE(), INTERVAL -1 DAY)) ',
     "Order By Date asc; ",
     sep = ""
@@ -364,8 +364,6 @@ if(right(this_round$Key,1) %>% unique() %>% length() == 1){this_round = rbind(th
 
 raw_list = raw_query %>% filter(Key %in% this_round$Key)                                                
 
-raw_list %>% mutate(Rarity = as.factor(Rarity)) %>% summary()
-
 a = a + 50
 b = b + 50
 if(b > 1000){b = 1000}
@@ -378,9 +376,6 @@ unique_card = raw_list %>% #filter(Key == ukey) %>%
            printings = Updated_Tracking_Keys$Printings[match(Key,Updated_Tracking_Keys$Working_Key)],
            edhrecRank = round(Updated_Tracking_Keys$edhrecRank[match(Key,Updated_Tracking_Keys$Working_Key)],-2),
            ) 
-
-nrow((unique_card))
-min(unique_card$Date)
 
 key_count = unique_card  %>% group_by(Key) %>% tally() %>% as.data.frame()
 unique_card = unique_card %>% left_join(key_count, by = c("Key"="Key")) %>% filter(n > 10) %>% select(-n)
@@ -397,7 +392,7 @@ full_tbl = unique_card                                   %>%
     fill(BL, .direction = "down")                        %>%
     ungroup()                                            %>%
     group_by(Key)                                        %>%
-    future_frame(Date, .length_out = 62, .bind_data = T) %>%
+    future_frame(Date, .length_out = 32, .bind_data = T) %>%
     ungroup()                                            %>%
     left_join(set_dates_xreg, by = c("Date"="rdate"))    %>%
     left_join(lagged_raw_query, by = c("dated_key"="dated_key")) %>%
@@ -423,34 +418,34 @@ full_tbl = unique_card                                   %>%
         df %>% 
             arrange(Date)                                             %>% 
             
-            tk_augment_fourier(Date    ,.period = c(14,28,56,84))       %>%
+            tk_augment_fourier(Date    ,.period = c(5,10,14,21,30,45,90))       %>%
             
-            tk_augment_lags(BL         , .lags = c(32,42,56))   %>%
+            tk_augment_lags(BL         , .lags = c(3,7,14,32,47))   %>%
             
-            tk_augment_lags(BL_QTY     , .lags = c(32,42,56))   %>%
+            tk_augment_lags(BL_QTY     , .lags = c(3,7,14,32,47))   %>%
             
-            tk_augment_lags(MKT        , .lags = c(32,42,56))   %>%
+            tk_augment_lags(MKT        , .lags = c(3,7,14,32,47))   %>%
             
-            tk_augment_lags(Sellers    , .lags = c(32,42,56))   %>%
+            tk_augment_lags(Sellers    , .lags = c(3,7,14,32,47))   %>%
             
-            tk_augment_lags(TCG_Rank   , .lags = c(32,42,56))   %>%
+            tk_augment_lags(TCG_Rank   , .lags = c(3,7,14,32,47))   %>%
             
-            tk_augment_lags(CK_ADJ_Rank, .lags = c(32,42,56))   %>%
+            tk_augment_lags(CK_ADJ_Rank, .lags = c(3,7,14,32,47))   %>%
             
             #Slidify BL Lags
             
-            tk_augment_slidify(BL_lag32              ,
+            tk_augment_slidify(BL_lag3              ,
                                .f       = ~mean(.x,na.rm=T),
                                .period  = c(3,7,14)  ,
                                .partial = T          ,
                                .align   = "right")          %>%
             
-            tk_augment_slidify(BL_lag42              ,
+            tk_augment_slidify(BL_lag7              ,
                                .f       = ~mean(.x,na.rm=T),
                                .period  = c(3,7,14)  ,
                                .partial = T          ,
                                .align   = "right")          %>%
-            tk_augment_slidify(BL_lag56              ,
+            tk_augment_slidify(BL_lag14              ,
                                .f       = ~mean(.x,na.rm=T),
                                .period  = c(3,7,14)  ,
                                .partial = T          ,
@@ -458,36 +453,36 @@ full_tbl = unique_card                                   %>%
             
             #Slidify BL QTY Lags
             
-            tk_augment_slidify(BL_QTY_lag32              ,
+            tk_augment_slidify(BL_QTY_lag3              ,
                                .f       = ~mean(.x,na.rm=T),
                                .period  = c(3,7,14)  ,
                                .partial = T          ,
                                .align   = "right")          %>%
             
-            tk_augment_slidify(BL_QTY_lag42              ,
+            tk_augment_slidify(BL_QTY_lag7              ,
                                .f       = ~mean(.x,na.rm=T),
                                .period  = c(3,7,14)  ,
                                .partial = T          ,
                                .align   = "right")          %>%
-            tk_augment_slidify(BL_QTY_lag56              ,
+            tk_augment_slidify(BL_QTY_lag14              ,
                                .f       = ~mean(.x,na.rm=T),
                                .period  = c(3,7,14)  ,
                                .partial = T          ,
                                .align   = "right")          %>% 
             #Slidify MKT Lags
             
-            tk_augment_slidify(MKT_lag32              ,
+            tk_augment_slidify(MKT_lag3              ,
                                .f       = ~mean(.x,na.rm=T),
                                .period  = c(3,7,14)  ,
                                .partial = T          ,
                                .align   = "right")          %>%
             
-            tk_augment_slidify(MKT_lag42              ,
+            tk_augment_slidify(MKT_lag7              ,
                                .f       = ~mean(.x,na.rm=T),
                                .period  = c(3,7,14)  ,
                                .partial = T          ,
                                .align   = "right")          %>%
-            tk_augment_slidify(MKT_lag56              ,
+            tk_augment_slidify(MKT_lag14              ,
                                .f       = ~mean(.x,na.rm=T),
                                .period  = c(3,7,14)  ,
                                .partial = T          ,
@@ -495,18 +490,18 @@ full_tbl = unique_card                                   %>%
             
             #Slidify Sellers Lags
             
-            tk_augment_slidify(Sellers_lag32              ,
+            tk_augment_slidify(Sellers_lag3              ,
                                .f       = ~mean(.x,na.rm=T),
                                .period  = c(3,7,14)  ,
                                .partial = T          ,
                                .align   = "right")          %>%
             
-            tk_augment_slidify(Sellers_lag42              ,
+            tk_augment_slidify(Sellers_lag7              ,
                                .f       = ~mean(.x,na.rm=T),
                                .period  = c(3,7,14)  ,
                                .partial = T          ,
                                .align   = "right")          %>%
-            tk_augment_slidify(Sellers_lag56              ,
+            tk_augment_slidify(Sellers_lag14              ,
                                .f       = ~mean(.x,na.rm=T),
                                .period  = c(3,7,14)  ,
                                .partial = T          ,
@@ -514,18 +509,18 @@ full_tbl = unique_card                                   %>%
             
             #Slidify TCG_Rank Lags
             
-            tk_augment_slidify(TCG_Rank_lag32              ,
+            tk_augment_slidify(TCG_Rank_lag3              ,
                                .f       = ~mean(.x,na.rm=T),
                                .period  = c(3,7,14)  ,
                                .partial = T          ,
                                .align   = "right")          %>%
             
-            tk_augment_slidify(TCG_Rank_lag42              ,
+            tk_augment_slidify(TCG_Rank_lag7              ,
                                .f       = ~mean(.x,na.rm=T),
                                .period  = c(3,7,14)  ,
                                .partial = T          ,
                                .align   = "right")          %>%
-            tk_augment_slidify(TCG_Rank_lag56              ,
+            tk_augment_slidify(TCG_Rank_lag14              ,
                                .f       = ~mean(.x,na.rm=T),
                                .period  = c(3,7,14)  ,
                                .partial = T          ,
@@ -533,18 +528,18 @@ full_tbl = unique_card                                   %>%
             
             #Slidify CK_ADJ_Rank Lags
             
-            tk_augment_slidify(CK_ADJ_Rank_lag32              ,
+            tk_augment_slidify(CK_ADJ_Rank_lag3              ,
                                .f       = ~mean(.x,na.rm=T),
                                .period  = c(3,7,14)  ,
                                .partial = T          ,
                                .align   = "right")          %>%
             
-            tk_augment_slidify(CK_ADJ_Rank_lag42              ,
+            tk_augment_slidify(CK_ADJ_Rank_lag7              ,
                                .f       = ~mean(.x,na.rm=T),
                                .period  = c(3,7,14)  ,
                                .partial = T          ,
                                .align   = "right")          %>%
-            tk_augment_slidify(CK_ADJ_Rank_lag56              ,
+            tk_augment_slidify(CK_ADJ_Rank_lag14              ,
                                .f       = ~mean(.x,na.rm=T),
                                .period  = c(3,7,14)  ,
                                .partial = T          ,
@@ -567,7 +562,7 @@ future_tbl =  full_tbl                                                          
     mutate(across(.cols = contains("_lag"), .fns = ~ ifelse(is.nan(.x),NA,.x))) %>%
     fill(contains("_lag"), .direction = "down")
 
-splits = data_prepared_tbl %>% time_series_split(Date, assess = 62, cumulative = T)
+splits = data_prepared_tbl %>% time_series_split(Date, assess = 32, cumulative = T)
 
 train_cleaned = training(splits)              %>%
     group_by(Key)                             %>%
@@ -631,10 +626,14 @@ wkflw_deepar_lstm = workflow() %>% add_model(
   deep_ar(
     id                    = "Key",
     freq                  = "D",
-    prediction_length     = 62,
-    epochs                = 7,
-    num_batches_per_epoch = 50,
+    num_layers            = 1,
+    prediction_length     = 32,
+    epochs                = 3,
+    num_batches_per_epoch = 21,
     cell_type             = "lstm",
+    #clip_gradient         = 1,
+    #penalty               = 5,
+    #learn_rate            = .9,
     scale                 = T
     )       %>%
     
@@ -644,16 +643,20 @@ wkflw_deepar_lstm = workflow() %>% add_model(
 
 # wflw 7 - Deep AR - GRU  
 wkflw_deepar_gru = workflow() %>% add_model(
-  deep_ar(
+  nbeats(
     id                    = "Key",
     freq                  = "D",
-    prediction_length     = 62,
-    epochs                = 7,
-    num_batches_per_epoch = 50,
-    cell_type             = "gru",
+    #num_layers            = 3,
+    prediction_length     = 32,
+    epochs                = 3,
+    num_batches_per_epoch = 21,
+    #cell_type             = "gru",
+    #clip_gradient         = 1,
+    #penalty               = .5,
+    #learn_rate            = .9,
     scale                 = T)       %>%
     
-    set_engine("gluonts_deepar"))    %>%
+    set_engine("gluonts_nbeats"))    %>%
   add_recipe(recipe_spec_dl)         %>%
   fit(train_cleaned) 
 
@@ -661,11 +664,15 @@ wkflw_deepar_gru = workflow() %>% add_model(
 
 all_models_tbl = modeltime_table(wflw_fit_prophet_boost,
                                  wflw_fit_rf           ,
-                                 wflw_fit_mars)
+                                 wflw_fit_mars) # %>%
+  # update_model_description(.model_id = 5,.new_model_desc ="DEEPAR - GRU") %>% 
+  # update_model_description(.model_id = 4,.new_model_desc ="DEEPAR - LSTM")
 
 deep_ar_tbl = modeltime_table(wkflw_deepar_lstm,wkflw_deepar_gru) %>%
-  update_model_description(.model_id = 2,.new_model_desc ="DEEPAR - GRU") %>% 
+  update_model_description(.model_id = 2,.new_model_desc ="NBEATS") %>% 
   update_model_description(.model_id = 1,.new_model_desc ="DEEPAR - LSTM")
+
+deep_ar_tbl %>% modeltime_accuracy(testing(splits)) %>% arrange(mae)
 
 
 #Accuracy Check for the curious before we tune
@@ -678,7 +685,7 @@ deep_ar_tbl = modeltime_table(wkflw_deepar_lstm,wkflw_deepar_gru) %>%
 # These folds and grids are entirely dependent upon my VM's restrictions
 
 set.seed(253)
-resampled_kfolds = train_cleaned %>% vfold_cv(v = 3)    
+resampled_kfolds = train_cleaned %>% vfold_cv(v = 7)    
 
 # XGBOOST hyper parameters
 # Create a Model with tune() instead of values
@@ -824,10 +831,10 @@ all_models_and_tuned_tbl = modeltime_table(
 # Resampling --------------------------------------------------------------
 resamples_tscv = train_cleaned %>% ungroup() %>%
     time_series_cv(
-        assess      = 92,
-        skip        = 31,
+        assess      = 32,
+        skip        = 17,
         cumulative  = T,
-        slice_limit = 5
+        slice_limit = 7
     )
 
 model_tuned_resample_tbl = all_models_and_tuned_tbl %>%
@@ -841,8 +848,8 @@ combined_model_accuracy = rbind(model_tuned_resample_tbl %>% modeltime_resample_
                                 deep_ar_tbl %>% modeltime_accuracy(testing(splits))) %>% mutate(.model_id = seq(nrow(.)))
 
 # I have a problem, I NEED to see.
-#model_tuned_resample_tbl %>% modeltime_resample_accuracy() %>% arrange(mae)
-
+model_tuned_resample_tbl %>% modeltime_resample_accuracy() %>% arrange(mae)
+deep_ar_tbl %>% modeltime_accuracy(testing(splits)) %>% arrange(mae)
 
 # Ensemble Average --------------------------------------------------------
 
@@ -1157,9 +1164,11 @@ boxplot_overview_tbl = raw_query %>% group_by(Key) %>% summarize(iqr = IQR(BL), 
 
 outer_range_boxplot_tbl = boxplot_ranking_tbl %>% group_by(Key) %>% slice(seq(5,n(),by = 5)) %>% ungroup()
 
-boxplot_overview_tbl = boxplot_ranking_tbl %>% left_join(outer_range_boxplot_tbl %>% select(Key,range),by = c("Key"="Key")) %>%
-    mutate(median_val = range.x, outer_lim = range.y) %>% select(-range.x,-range.y) %>%
-    select(Key,current_val,iqr,sd,median_val,outer_lim,max_forecast_value,plus_minus,Date)
+boxplot_overview_tbl = boxplot_ranking_tbl %>% left_join(outer_range_boxplot_tbl %>% select(Key,range) %>% distinct(),by = c("Key"="Key")) %>%
+  group_by(Key) %>%
+  mutate(median_val = range.x, outer_lim = max(range.y)) %>% select(-range.x,-range.y) %>%
+  select(Key,current_val,iqr,sd,median_val,outer_lim,max_forecast_value,plus_minus,Date) %>% ungroup() %>% distinct()
+
 
 grand_slam_tbl = boxplot_overview_tbl %>% group_by(Key) %>% slice(seq(3,n(),by = 5)) %>% ungroup() %>%
     mutate(Classification = 
@@ -1311,8 +1320,7 @@ Updated_Tracking_Keys = Updated_Tracking_Keys %>% replace_na(list(Foil = "")) %>
 
 export_slim_sf_tbl = slimmed_sf_tbl %>% left_join(Updated_Tracking_Keys %>% select(Key, name, Set, Rarity), by =c("Key"="Key")) %>%
     select(Key, name, Set, Rarity, everything()) %>% mutate(Safety = ifelse(sd > iqr, "Volatile","Not Volatile")) %>%
-    #select(-iqr,-sd) %>% 
-    distinct() #%>% filter(Classification == "S")
+    distinct()  %>% mutate(change = (max_forecast_value + (plus_minus * .5)) - current_val, rate_chg = round(change/current_val,3)) %>% filter(rate_chg >= .05) %>% select(-change,-rate_chg)
 
 ss <- drive_get("Ensemble_Time_Series")
 

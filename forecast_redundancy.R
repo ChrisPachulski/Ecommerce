@@ -12,12 +12,12 @@ gaeas_cradle <- function(email){
 }
 
 con <- gaeas_cradle("wolfoftinstreet@gmail.com")
-statement = paste("SELECT * FROM `gaeas-cradle.ensemble_forecast_results.",gsub("-","_",Sys.Date()),"` ")
+statement = paste("SELECT * FROM `gaeas-cradle.ensemble_forecast_results.",gsub("-","_",(Sys.Date()) ),"_ENSEMBLE` ",sep="")
 
-binary_check = 0
-binary_check = tryCatch({dbSendQuery(con, statement = statement) %>% dbFetch(., n = -1)}, error = function(e){1})
-
-if(binary_check == 1){
+binary_check = 1
+binary_check = tryCatch({dbSendQuery(con, statement = statement) %>% dbFetch(., n = -1) %>% nrow()}, error = function(e){0})
+print(paste("Automation detected a check value of: ",binary_check,". 0 means run our queries, forecast was killed.",sep=""))
+if(binary_check == 0){
   
   con                = gaeas_cradle("wolfoftinstreet@gmail.com")
   
@@ -55,7 +55,7 @@ if(binary_check == 1){
     'FORMAT_DATE("%Y_%m_%d", DATE_SUB(CURRENT_DATE(), INTERVAL -2 DAY)) ',
     'GROUP BY 1 ',
     ") b ",
-    "WHERE avg_bl >= 3.50 ",
+    "WHERE avg_bl >= 2.50 ",
     "LIMIT 5000 ",
     sep = ""
   )
@@ -88,7 +88,7 @@ if(binary_check == 1){
   statement             = paste("SELECT * FROM `gaeas-cradle.ensemble_raw_results.TODAYS_EAF` ")
   
   metrics                  = dbSendQuery(con, statement = statement) %>% 
-    dbFetch(., n = -1)  
+    dbFetch(., n = -1)  %>% filter(Date != (Sys.Date() + 1) & Date != (Sys.Date() + 2) & Date != (Sys.Date() + 3) )
   
   rmse_to_keep = metrics %>% select(Key, rmse) %>% distinct() %>% arrange(rmse) %>% mutate(rank = seq(nrow(.)), rank = round(rank/nrow(.),3))%>% filter(rank <= 0.4)
   
@@ -109,28 +109,30 @@ if(binary_check == 1){
                 select(Key, max_forecast_value,Date), by = c("Key"="Key")) %>% drop_na() %>%
     left_join(joint_historical %>% rename(Date = Date.x) %>% group_by(Key) %>%
                 filter(Date == max(Date)) %>% select(Key,BL,mae,rmse,rsq), by = c("Key"="Key") ) %>%
-    mutate(mae_impact = round(mae/BL,4)) %>% filter( (rsq >= .35) | (Key %in% rmse_to_keep$Key) ) %>% 
+    mutate(mae_impact = round(mae/BL,4)) %>% filter( (rsq >= .70) | (Key %in% rmse_to_keep$Key) ) %>% 
     mutate(current_val = BL,plus_minus = mae) %>% select(-BL,-mae) %>% 
     select(Key,current_val,iqr,range,sd,max_forecast_value,plus_minus,Date)
   
   # Boxplot Forecast Classification Ranking ---------------------------------
   
   boxplot_overview_tbl = raw_query %>% group_by(Key) %>% summarize(iqr = IQR(BL), range = fivenum(BL), sd = sd(BL)) %>% ungroup() %>%
-    left_join(forecasted_tbl %>% filter(!grepl("ACTUAL",.model_desc)) %>% group_by(Key) %>% 
+    left_join(forecasted_tbl %>% filter(!grepl("ACTUAL",.model_desc)) %>% group_by(Key) %>% filter(Date > (Sys.Date()+ 5) ) %>%
                 mutate(max_forecast_value = max(BL), max_date = ifelse(max_forecast_value == BL, Date,NA)) %>% #filter(Date == max(Date)) %>% 
                 select(-BL) %>% drop_na() %>%
                 select(Key, max_forecast_value,Date), by = c("Key"="Key")) %>% drop_na() %>%
     left_join(joint_historical %>% rename(Date = Date.x) %>% group_by(Key) %>%
                 filter(Date == max(Date)) %>% select(Key,BL,mae,rmse,rsq), by = c("Key"="Key") ) %>%
+      filter(Date > (Sys.Date()+ 5) ) %>%
     mutate(current_val = BL,plus_minus = mae) %>% select(-BL,-mae) %>% 
     select(Key,current_val,iqr,range,sd,max_forecast_value,plus_minus,Date)
     
   
   outer_range_boxplot_tbl = boxplot_ranking_tbl %>% group_by(Key) %>% slice(seq(5,n(),by = 5)) %>% ungroup()
   
-  boxplot_overview_tbl = boxplot_ranking_tbl %>% left_join(outer_range_boxplot_tbl %>% select(Key,range),by = c("Key"="Key")) %>%
-    mutate(median_val = range.x, outer_lim = range.y) %>% select(-range.x,-range.y) %>%
-    select(Key,current_val,iqr,sd,median_val,outer_lim,max_forecast_value,plus_minus,Date)
+  boxplot_overview_tbl = boxplot_ranking_tbl %>% left_join(outer_range_boxplot_tbl %>% select(Key,range) %>% distinct(),by = c("Key"="Key")) %>%
+    group_by(Key) %>%
+    mutate(median_val = range.x, outer_lim = max(range.y)) %>% select(-range.x,-range.y) %>%
+    select(Key,current_val,iqr,sd,median_val,outer_lim,max_forecast_value,plus_minus,Date) %>% ungroup() %>% distinct() %>% filter(Date > (Sys.Date()+ 5) )
   
   grand_slam_tbl = boxplot_overview_tbl %>% group_by(Key) %>% slice(seq(3,n(),by = 5)) %>% ungroup() %>%
     mutate(Classification = 
@@ -245,9 +247,9 @@ if(binary_check == 1){
   
   #grand_slam_tbl %>% view()
   
-  grand_slam_tbl %>% group_by(Key) %>% summarize(median_val = max(median_val), outer_lim = max(outer_lim), Date = max(Date))
+  #grand_slam_tbl %>% group_by(Key) %>% summarize(median_val = min(median_val), outer_lim = max(outer_lim), Date = max(Date))
   slimmed_sf_tbl = grand_slam_tbl %>% select(Key,current_val,iqr,sd,max_forecast_value,plus_minus,Classification) %>% distinct() %>% 
-    left_join(grand_slam_tbl %>% group_by(Key) %>% summarize(median_val = max(median_val), outer_lim = max(outer_lim), Date = max(Date)),
+    left_join(grand_slam_tbl %>% group_by(Key) %>% summarize(median_val = min(median_val), outer_lim = max(outer_lim), Date = max(Date)),
               by = c("Key"="Key")) %>%
     select(Key,current_val,iqr,sd,median_val,outer_lim, max_forecast_value, plus_minus, Date, Classification) %>%
     mutate(iqr = round(iqr,1),
@@ -260,6 +262,7 @@ if(binary_check == 1){
   
   slimmed_sf_tbl = slimmed_sf_tbl %>% filter( Key %!in% removal$Key )
   
+  #grand_slam_tbl %>% filter(grepl("Ankh of MishraUnlimited EditionR",Key)) %>% view()
   
   options(httr_oob_default=TRUE) 
   options(gargle_oauth_email = "pachun95@gmail.com")
@@ -282,8 +285,7 @@ if(binary_check == 1){
   
   export_slim_sf_tbl = slimmed_sf_tbl %>% left_join(Updated_Tracking_Keys %>% select(Key, name, Set, Rarity), by =c("Key"="Key")) %>%
     select(Key, name, Set, Rarity, everything()) %>% mutate(Safety = ifelse(sd > iqr, "Volatile","Not Volatile")) %>%
-    #select(-iqr,-sd) %>% 
-    distinct() #%>% filter(Classification == "S")
+    distinct() %>% mutate(change = (max_forecast_value + (plus_minus * .5)) - current_val, rate_chg = round(change/current_val,3)) %>% filter(rate_chg >= .05) %>% select(-change,-rate_chg)
   
   ss <- drive_get("Ensemble_Time_Series")
   
@@ -298,5 +300,15 @@ if(binary_check == 1){
   mybq <- bq_table(project = "gaeas-cradle", dataset = "ensemble_forecast_results", table = paste(gsub("-","_",currentDate),"_ENSEMBLE",sep=""))
   bq_table_upload(x=mybq, values = export_slim_sf_tbl, fields=as_bq_fields(export_slim_sf_tbl),nskip = 1, source_format = "CSV",create_disposition = "CREATE_IF_NEEDED", write_disposition = "WRITE_TRUNCATE")
   print("BQ Forecast Upload Successful!")
+  
+  
+  con <- gaeas_cradle("wolfoftinstreet@gmail.com")
+  statement = paste("SELECT * FROM `gaeas-cradle.ensemble_raw_results.TODAYS_EAF`  ")
+  eaf <- dbSendQuery(con, statement = statement) %>% dbFetch(., n = -1) %>% distinct()
+  
+  currentDate <- Sys.Date()
+  mybq <- bq_table(project = "gaeas-cradle", dataset = "ensemble_raw_results", table = paste(gsub("-","_",currentDate),"_EAF",sep=""))
+  bq_table_upload(x=mybq, values = eaf, fields=as_bq_fields(eaf),nskip = 1, source_format = "CSV",create_disposition = "CREATE_IF_NEEDED", write_disposition = "WRITE_TRUNCATE")
+  print("BQ Raw Results Upload Successful!")
 
 } else {print("Today's Forecast Went Through! No Problemo Boss!!!")}
