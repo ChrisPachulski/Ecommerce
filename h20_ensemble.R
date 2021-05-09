@@ -216,8 +216,8 @@ colnames(Entire_Dictionary)
 
 # Database Interaction & Local Uploads ------------------------------------
 
-Sets                  = read.csv("/home/cujo253/Essential_Referential_CSVS/Sets.csv",stringsAsFactors = TRUE)
-ck_conversion         = read_csv("/home/cujo253/Essential_Referential_CSVS/mtgjson_ck_sets.csv")
+Sets                  = read.csv("/home/cujo253/Sets.csv",stringsAsFactors = TRUE)
+ck_conversion         = read_csv("/home/cujo253/mtgjson_ck_sets.csv")
 Updated_Tracking_Keys = Entire_Dictionary                                                     %>% 
   replace_na(list(Foil = ""))                                           %>%
   mutate(card          = gsub("\\s\\/\\/.*","",card)                      ,
@@ -578,7 +578,7 @@ h2o.clusterStatus()
 model_spec_h2o = automl_reg('regression') %>%
   set_engine(
     engine = 'h2o',
-    max_runtime_secs = 1200, 
+    max_runtime_secs = 2400, 
     max_models = 30,
     nfolds = 5,
     exclude_algos = c('DeepLearning'),
@@ -594,7 +594,7 @@ h2o_workflow = workflow() %>%
 model_spec_dl_h2o = automl_reg('regression') %>%
   set_engine(
     engine = 'h2o',
-    max_runtime_secs = 1200, 
+    max_runtime_secs = 2400, 
     max_models = 30,
     nfolds = 5,
     exclude_algos = c('StackedEnsemble',
@@ -699,7 +699,7 @@ boxplot_tbl = raw_query %>% group_by(Key) %>% summarize(iqr = IQR(BL), range = f
               select(Key, max_forecast_value,Date), by = c("Key"="Key")) %>% drop_na() %>%
   left_join(recombined_tbl %>% filter(grepl("ACTUAL",.model_desc)) %>% group_by(Key) %>%
               filter(Date == max(Date)) %>% select(Key,BL,mae,rmse,rsq), by = c("Key"="Key") ) %>%
-  mutate(mae_impact = round(mae/BL,4)) %>% filter( (rsq >= .3) | (Key %in% rmse_to_keep$Key) ) %>% 
+  mutate(mae_impact = round(mae/BL,4)) %>% filter( (rsq >= .75) | (Key %in% rmse_to_keep$Key) ) %>% 
   mutate(current_val = BL,plus_minus = mae) %>% select(-BL,-mae) %>% 
   select(Key,current_val,iqr,range,sd,max_forecast_value,plus_minus,Date) #%>% filter(Date > (Sys.Date() + 5))
 
@@ -1035,7 +1035,18 @@ export_slim_sf_tbl = slimmed_sf_tbl %>% left_join(Updated_Tracking_Keys %>% sele
   distinct()  %>% mutate(change = (max_forecast_value + (plus_minus * .5)) - current_val, rate_chg = round(change/current_val,3)) %>% filter(rate_chg >= .05) %>% select(-change,-rate_chg)
 
 
-export_slim_sf_tbl %>% view()
+ss <- drive_get("Ensemble_Time_Series")
+
+sheet_write(
+  export_slim_sf_tbl,
+  ss = ss,
+  sheet = "Todays_Forecast"
+)
+# new_results = export_slim_sf_tbl
+# view(new_results)
+# new_results %>% filter(grepl("Eunuchs' Intrigues",Key))
+
+# export_slim_sf_tbl %>% view()
 
 con <- gaeas_cradle("wolfoftinstreet@gmail.com")
 currentDate <- Sys.Date()
@@ -1052,3 +1063,6 @@ currentDate <- Sys.Date()
 mybq <- bq_table(project = "gaeas-cradle", dataset = "ensemble_raw_results", table = paste(gsub("-","_",currentDate),"_EAF",sep=""))
 bq_table_upload(x=mybq, values = eaf, fields=as_bq_fields(eaf),nskip = 1, source_format = "CSV",create_disposition = "CREATE_IF_NEEDED", write_disposition = "WRITE_TRUNCATE")
 print("BQ Raw Results Upload Successful!")
+
+
+h2o.shutdown(prompt=F)
