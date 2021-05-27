@@ -261,7 +261,7 @@ statement <- paste(
   'SELECT a.Key, number, Param param 
   FROM `gaeas-cradle.ck_funny_money.*` a
   LEFT JOIN `gaeas-cradle.roster.mtgjson` b on b.tcg_id = a.Param
-    WHERE CK_Backing <= .40 and Param is not NULL and 
+    WHERE CK_Backing >= .40 and Param is not NULL and 
     _Table_Suffix between 
     FORMAT_DATE("%Y_%m_%d", DATE_SUB(CURRENT_DATE(), INTERVAL 188 DAY)) AND 
     FORMAT_DATE("%Y_%m_%d", DATE_SUB(CURRENT_DATE(), INTERVAL -1 DAY))  ',
@@ -291,8 +291,8 @@ statement <- paste(
     'FORMAT_DATE("%Y_%m_%d", DATE_SUB(CURRENT_DATE(), INTERVAL -1 DAY)) ',
     'GROUP BY 1 ',
     ") b ",
-    "WHERE avg_bl >= 2.50 ",
-    "LIMIT 5000 ",
+    "WHERE avg_bl >= 5.00 ",
+    "LIMIT 2000 ",
     sep = ""
 )
 
@@ -366,7 +366,7 @@ raw_list = raw_query %>% filter(Key %in% this_round$Key)
 
 a = a + 50
 b = b + 50
-if(b > 1000){b = 1000}
+if(b > 2000){b = 2000}
 
 unique_card = raw_list %>% #filter(Key == ukey) %>% 
     mutate(BL = ifelse(is.na(BL), (0), BL )) %>%
@@ -392,7 +392,7 @@ full_tbl = unique_card                                   %>%
     fill(BL, .direction = "down")                        %>%
     ungroup()                                            %>%
     group_by(Key)                                        %>%
-    future_frame(Date, .length_out = 32, .bind_data = T) %>%
+    future_frame(Date, .length_out = 47, .bind_data = T) %>%
     ungroup()                                            %>%
     left_join(set_dates_xreg, by = c("Date"="rdate"))    %>%
     left_join(lagged_raw_query, by = c("dated_key"="dated_key")) %>%
@@ -562,7 +562,7 @@ future_tbl =  full_tbl                                                          
     mutate(across(.cols = contains("_lag"), .fns = ~ ifelse(is.nan(.x),NA,.x))) %>%
     fill(contains("_lag"), .direction = "down")
 
-splits = data_prepared_tbl %>% time_series_split(Date, assess = 32, cumulative = T)
+splits = data_prepared_tbl %>% time_series_split(Date, assess = 47, cumulative = T)
 
 train_cleaned = training(splits)              %>%
     group_by(Key)                             %>%
@@ -627,8 +627,8 @@ wkflw_deepar_lstm = workflow() %>% add_model(
     id                    = "Key",
     freq                  = "D",
     num_layers            = 1,
-    prediction_length     = 32,
-    epochs                = 3,
+    prediction_length     = 47,
+    epochs                = 35,
     num_batches_per_epoch = 21,
     cell_type             = "lstm",
     #clip_gradient         = 1,
@@ -642,23 +642,23 @@ wkflw_deepar_lstm = workflow() %>% add_model(
   fit(train_cleaned)
 
 # wflw 7 - Deep AR - GRU  
-wkflw_deepar_gru = workflow() %>% add_model(
-  nbeats(
-    id                    = "Key",
-    freq                  = "D",
-    #num_layers            = 3,
-    prediction_length     = 32,
-    epochs                = 3,
-    num_batches_per_epoch = 21,
-    #cell_type             = "gru",
-    #clip_gradient         = 1,
-    #penalty               = .5,
-    #learn_rate            = .9,
-    scale                 = T)       %>%
-    
-    set_engine("gluonts_nbeats"))    %>%
-  add_recipe(recipe_spec_dl)         %>%
-  fit(train_cleaned) 
+# wkflw_deepar_gru = workflow() %>% add_model(
+#   nbeats(
+#     id                    = "Key",
+#     freq                  = "D",
+#     #num_layers            = 3,
+#     prediction_length     = 32,
+#     epochs                = 25,
+#     num_batches_per_epoch = 21,
+#     #cell_type             = "gru",
+#     #clip_gradient         = 1,
+#     #penalty               = .5,
+#     #learn_rate            = .9,
+#     scale                 = T)       %>%
+#     
+#     set_engine("gluonts_nbeats"))    %>%
+#   add_recipe(recipe_spec_dl)         %>%
+#   fit(train_cleaned) 
 
 
 
@@ -668,12 +668,13 @@ all_models_tbl = modeltime_table(wflw_fit_prophet_boost,
   # update_model_description(.model_id = 5,.new_model_desc ="DEEPAR - GRU") %>% 
   # update_model_description(.model_id = 4,.new_model_desc ="DEEPAR - LSTM")
 
-deep_ar_tbl = modeltime_table(wkflw_deepar_lstm,wkflw_deepar_gru) %>%
-  update_model_description(.model_id = 2,.new_model_desc ="NBEATS") %>% 
+deep_ar_tbl = modeltime_table(wkflw_deepar_lstm) %>%
+  #update_model_description(.model_id = 2,.new_model_desc ="NBEATS") %>% 
   update_model_description(.model_id = 1,.new_model_desc ="DEEPAR - LSTM")
 
 deep_ar_tbl %>% modeltime_accuracy(testing(splits)) %>% arrange(mae)
 
+all_models_tbl %>% modeltime_accuracy(testing(splits)) %>% arrange(mae)
 
 #Accuracy Check for the curious before we tune
 #all_models_tbl %>% modeltime_accuracy(testing(splits)) %>% arrange(mae)
@@ -806,12 +807,13 @@ wflw_fit_mars_tune = wflw_spec_mars_tune                      %>%
 all_models_and_tuned_tbl = modeltime_table(
     wflw_fit_prophet_xgboost_tune,
     wflw_fit_rf_tune     ,
-    wflw_fit_mars_tune
+    wflw_fit_mars_tune,
+    wkflw_deepar_lstm
 ) %>% 
     update_model_description(1, "PROPHET W/ XGB - Tuned") %>%
     update_model_description(2, "RANGER - Tuned")  %>%
     update_model_description(3, "EARTH - Tuned")   %>%
-    combine_modeltime_tables(all_models_tbl)
+    update_model_description(4, "DEEPAR - Refit") 
 
 #calibration_tbl = all_models_and_tuned_tbl %>% 
 #                  modeltime_calibrate(testing(splits))
@@ -831,10 +833,10 @@ all_models_and_tuned_tbl = modeltime_table(
 # Resampling --------------------------------------------------------------
 resamples_tscv = train_cleaned %>% ungroup() %>%
     time_series_cv(
-        assess      = 32,
-        skip        = 17,
+        assess      = 47,
+        skip        = 23,
         cumulative  = T,
-        slice_limit = 7
+        slice_limit = 3
     )
 
 model_tuned_resample_tbl = all_models_and_tuned_tbl %>%
@@ -844,12 +846,12 @@ model_tuned_resample_tbl = all_models_and_tuned_tbl %>%
                                              allow_par = T))
 
 
-combined_model_accuracy = rbind(model_tuned_resample_tbl %>% modeltime_resample_accuracy() %>% select(-n) ,
-                                deep_ar_tbl %>% modeltime_accuracy(testing(splits))) %>% mutate(.model_id = seq(nrow(.)))
+
+combined_model_accuracy = rbind(model_tuned_resample_tbl %>% modeltime_resample_accuracy())
 
 # I have a problem, I NEED to see.
 model_tuned_resample_tbl %>% modeltime_resample_accuracy() %>% arrange(mae)
-deep_ar_tbl %>% modeltime_accuracy(testing(splits)) %>% arrange(mae)
+#deep_ar_tbl %>% modeltime_accuracy(testing(splits)) %>% arrange(mae)
 
 # Ensemble Average --------------------------------------------------------
 
@@ -857,7 +859,7 @@ deep_ar_tbl %>% modeltime_accuracy(testing(splits)) %>% arrange(mae)
 models_to_keep_ensemble = combined_model_accuracy               %>% 
                           arrange(mae)                          %>% 
                           select(.model_id)                     %>% 
-                          head(n=5)
+                          head(n=2)
 # Interesting element here that can drastically change forecasts results
 # There are three options:
 # Ensemble Average  - Prone to over fitting, but, if we can get away with it ...
@@ -902,7 +904,7 @@ metrics  = forecast_ensemble_tbl %>%
         metric_set = metric_set(mae, rmse, rsq))
 
 
-rmse_to_keep = metrics %>% arrange(rmse) %>% mutate(rank = seq(nrow(.))) %>% filter(rank <= 20)
+rmse_to_keep = metrics %>% arrange(rmse) %>% filter(rmse <= .22 & rsq >.05)
 
 
 # Sneak a peak:
@@ -1162,7 +1164,7 @@ boxplot_overview_tbl = raw_query %>% group_by(Key) %>% summarize(iqr = IQR(BL), 
     mutate(current_val = BL,plus_minus = mae) %>% select(-BL,-mae) %>% 
     select(Key,current_val,iqr,range,sd,max_forecast_value,plus_minus,Date)
 
-outer_range_boxplot_tbl = boxplot_ranking_tbl %>% group_by(Key) %>% slice(seq(5,n(),by = 5)) %>% ungroup()
+outer_range_boxplot_tbl = boxplot_ranking_tbl %>% group_by(Key) %>% dplyr::slice(seq(5,n(),by = 5)) %>% ungroup()
 
 boxplot_overview_tbl = boxplot_ranking_tbl %>% left_join(outer_range_boxplot_tbl %>% select(Key,range) %>% distinct(),by = c("Key"="Key")) %>%
   group_by(Key) %>%
@@ -1170,7 +1172,7 @@ boxplot_overview_tbl = boxplot_ranking_tbl %>% left_join(outer_range_boxplot_tbl
   select(Key,current_val,iqr,sd,median_val,outer_lim,max_forecast_value,plus_minus,Date) %>% ungroup() %>% distinct()
 
 
-grand_slam_tbl = boxplot_overview_tbl %>% group_by(Key) %>% slice(seq(3,n(),by = 5)) %>% ungroup() %>%
+grand_slam_tbl = boxplot_overview_tbl %>% group_by(Key) %>% dplyr::slice(seq(3,n(),by = 5)) %>% ungroup() %>%
     mutate(Classification = 
                     ifelse(   (max_forecast_value > median_val)
                              &

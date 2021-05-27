@@ -1,7 +1,8 @@
-pacman::p_load(tidyverse,recipes,httr,jsonlite,ranger,timetk,lubridate,bigrquery,modeltime,modeltime.ensemble,modeltime.gluonts,modeltime.h2o,recipes,rsample,kernlab,glmnet,kknn,earth,tidymodels,rules,doFuture,future,tune,plotly,googlesheets4,googledrive)
+pacman::p_load(tidyverse,recipes,httr,jsonlite,h2o,ranger,timetk,lubridate,bigrquery,modeltime,modeltime.ensemble,modeltime.gluonts,modeltime.h2o,recipes,rsample,kernlab,glmnet,kknn,earth,tidymodels,rules,doFuture,future,tune,plotly,googlesheets4,googledrive)
 invisible(right <- function(text, num_char) {
   substr(text, nchar(text) - (num_char-1), nchar(text))
 })
+
 options(httr_oob_default=TRUE) 
 options(gargle_oauth_email = "pachun95@gmail.com")
 drive_auth(email = "pachun95@gmail.com",use_oob=TRUE)
@@ -261,9 +262,9 @@ statement <- paste(
   'SELECT a.Key, number, Param param 
   FROM `gaeas-cradle.ck_funny_money.*` a
   LEFT JOIN `gaeas-cradle.roster.mtgjson` b on b.tcg_id = a.Param
-    WHERE CK_Backing <= .40 and Param is not NULL and 
+    WHERE CK_Backing >= .40 and Param is not NULL and 
     _Table_Suffix between 
-    FORMAT_DATE("%Y_%m_%d", DATE_SUB(CURRENT_DATE(), INTERVAL 188 DAY)) AND 
+    FORMAT_DATE("%Y_%m_%d", DATE_SUB(CURRENT_DATE(), INTERVAL 365 DAY)) AND 
     FORMAT_DATE("%Y_%m_%d", DATE_SUB(CURRENT_DATE(), INTERVAL -1 DAY))  ',
   sep = ""
 )
@@ -287,12 +288,12 @@ statement <- paste(
   'WHERE Foil_Status not like "%FOIL%" and (Rarity like "R" or Rarity like "M" or Rarity like "U") and a.Set is not NULL and param is not NULL ',
   'AND param in (',Short_list_params,') ',
   'and _TABLE_SUFFIX BETWEEN ',
-  'FORMAT_DATE("%Y_%m_%d", DATE_SUB(CURRENT_DATE(), INTERVAL 188 DAY)) AND ',
+  'FORMAT_DATE("%Y_%m_%d", DATE_SUB(CURRENT_DATE(), INTERVAL 365 DAY)) AND ',
   'FORMAT_DATE("%Y_%m_%d", DATE_SUB(CURRENT_DATE(), INTERVAL -1 DAY)) ',
   'GROUP BY 1 ',
   ") b ",
-  "WHERE avg_bl >= 2.50 ",
-  "LIMIT 5000 ",
+  "WHERE avg_bl >= 5 ",
+  "LIMIT 2000 ",
   sep = ""
 )
 
@@ -312,7 +313,7 @@ statement <- paste(
   'WHERE Foil_Status not like "%FOIL%" and (Rarity like "R" or Rarity like "M" or Rarity like "U") and a.Set is not NULL and param is not NULL ',
   'AND param in (',Short_list_params,') ',
   'and _TABLE_SUFFIX BETWEEN ',
-  'FORMAT_DATE("%Y_%m_%d", DATE_SUB(CURRENT_DATE(), INTERVAL 188 DAY)) AND ',
+  'FORMAT_DATE("%Y_%m_%d", DATE_SUB(CURRENT_DATE(), INTERVAL 365 DAY)) AND ',
   'FORMAT_DATE("%Y_%m_%d", DATE_SUB(CURRENT_DATE(), INTERVAL -1 DAY)) AND ',
   'NOT regexp_contains(a.set, r"Alpha|Beta|Guild Kit") ',
   "Order By Date asc; ",
@@ -329,7 +330,7 @@ statement <- paste(
   'WHERE Foil_Status not like "%FOIL%" and (Rarity like "R" or Rarity like "M" or Rarity like "U") and a.Set is not NULL and param is not NULL ',
   'AND param in (',Short_list_params,') ',
   'and _TABLE_SUFFIX BETWEEN ',
-  'FORMAT_DATE("%Y_%m_%d", DATE_SUB(CURRENT_DATE(), INTERVAL 188 DAY)) AND ',
+  'FORMAT_DATE("%Y_%m_%d", DATE_SUB(CURRENT_DATE(), INTERVAL 365 DAY)) AND ',
   'FORMAT_DATE("%Y_%m_%d", DATE_SUB(CURRENT_DATE(), INTERVAL -1 DAY)) ',
   "Order By Date asc; ",
   sep = ""
@@ -371,7 +372,7 @@ full_tbl = unique_card                                   %>%
   fill(BL, .direction = "down")                        %>%
   ungroup()                                            %>%
   group_by(Key)                                        %>%
-  future_frame(Date, .length_out = 32, .bind_data = T) %>%
+  future_frame(Date, .length_out = 62, .bind_data = T) %>%
   ungroup()                                            %>%
   left_join(set_dates_xreg, by = c("Date"="rdate"))    %>%
   left_join(lagged_raw_query, by = c("dated_key"="dated_key")) %>%
@@ -541,7 +542,7 @@ future_tbl =  full_tbl                                                          
   mutate(across(.cols = contains("_lag"), .fns = ~ ifelse(is.nan(.x),NA,.x))) %>%
   fill(contains("_lag"), .direction = "down")
 
-splits = data_prepared_tbl %>% time_series_split(Date, assess = 32, cumulative = T)
+splits = data_prepared_tbl %>% time_series_split(Date, assess = 62, cumulative = T)
 
 train_cleaned = training(splits)              %>%
   group_by(Key)                             %>%
@@ -578,7 +579,7 @@ h2o.clusterStatus()
 model_spec_h2o = automl_reg('regression') %>%
   set_engine(
     engine = 'h2o',
-    max_runtime_secs = 2400, 
+    max_runtime_secs = 3200, 
     max_models = 30,
     nfolds = 5,
     exclude_algos = c('DeepLearning'),
@@ -594,7 +595,7 @@ h2o_workflow = workflow() %>%
 model_spec_dl_h2o = automl_reg('regression') %>%
   set_engine(
     engine = 'h2o',
-    max_runtime_secs = 2400, 
+    max_runtime_secs = 3200, 
     max_models = 30,
     nfolds = 5,
     exclude_algos = c('StackedEnsemble',
@@ -693,15 +694,15 @@ four_week_combined_tbl  = rbind(four_week_combined_tbl,four_week_results_tbl)
 boxplot_ranking_tbl = NULL
 boxplot_tbl = raw_query %>% group_by(Key) %>% summarize(iqr = IQR(BL), range = fivenum(BL), sd = sd(BL)) %>% ungroup() %>%
   left_join(recombined_tbl %>% filter(!grepl("ACTUAL",.model_desc)) %>% group_by(Key) %>% 
+              filter(Date > (Sys.Date() + 8)) %>% 
               mutate(max_forecast_value = max(.value), max_date = ifelse(max_forecast_value == .value, Date,NA))  %>% 
-              filter(Date > (Sys.Date() + 5)) %>% 
               select(-BL,-set_release) %>% drop_na() %>%
               select(Key, max_forecast_value,Date), by = c("Key"="Key")) %>% drop_na() %>%
   left_join(recombined_tbl %>% filter(grepl("ACTUAL",.model_desc)) %>% group_by(Key) %>%
               filter(Date == max(Date)) %>% select(Key,BL,mae,rmse,rsq), by = c("Key"="Key") ) %>%
-  mutate(mae_impact = round(mae/BL,4)) %>% filter( (rsq >= .75) | (Key %in% rmse_to_keep$Key) ) %>% 
+  mutate(mae_impact = round(mae/BL,4)) %>% #filter( (rsq >= .35) | (Key %in% rmse_to_keep$Key) ) %>% 
   mutate(current_val = BL,plus_minus = mae) %>% select(-BL,-mae) %>% 
-  select(Key,current_val,iqr,range,sd,max_forecast_value,plus_minus,Date) #%>% filter(Date > (Sys.Date() + 5))
+  select(Key,current_val,iqr,range,sd,max_forecast_value,plus_minus,Date) #%>% filter(Date > (Sys.Date() + 8))
 
 boxplot_ranking_tbl = rbind(boxplot_ranking_tbl,boxplot_tbl)
 
